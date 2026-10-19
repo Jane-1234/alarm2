@@ -2,7 +2,7 @@
  * 策略：联网时先取最新文件（并更新缓存），断网时才用缓存。
  * 每次改版：把 VERSION 改成和 index.html 里 APP_VERSION 一样的新号。
  */
-const VERSION = '1.1.2';
+const VERSION = '1.2.0';
 const CACHE = 'sg-alarm-v' + VERSION;
 const AUDIO = [
   '01_Time_to_go_carpark.mp3',
@@ -13,7 +13,35 @@ const AUDIO = [
   '06_Remember_the_milk.mp3',
   '07_Transport_go_toilet.mp3',
   '08_Transport_go_to_lobby.mp3',
-  '09_Fetch_the_gym_student.mp3'
+  '09_Fetch_the_gym_student.mp3',
+  '10_Fetch_the_robotic_students.mp3',
+  '11_Janelle_Lim_level3_gym.mp3',
+  '12_Kidz_Amaze_count_heads.mp3',
+  '13_Kidz_Amaze_back_teabreak.mp3',
+  '14_Olivia_Lim_Julia_level3_gym.mp3',
+  '15_Ann_Yee_level3_gym.mp3',
+  '16_Watch_for_Julia.mp3',
+  '17_Yu_Cheng_level3_ICR.mp3',
+  '18_Shane_ICR.mp3',
+  '19_Ann_Yu_Clarys_gym.mp3',
+  '20_Teabreak_milk.mp3',
+  '21_Pack_Shane_bag.mp3',
+  '22_Seraphina_Jing_Ting_swim.mp3',
+  '23_Level3_ICR_four_students.mp3',
+  '24_Level2_water_play.mp3',
+  '25_Thursday_swimmers.mp3',
+  '26_Water_play_shower.mp3',
+  '27_Water_play_upstairs.mp3',
+  '28_Water_play_teabreak.mp3',
+  '29_Five_pm_swimmers_upstairs.mp3',
+  '30_Nathanael_level3_ICR.mp3',
+  '31_Desiree_go_home.mp3',
+  '32_Yi_Zhen_Jun_Yi_swimming.mp3',
+  '33_Four_pm_swimmers_change.mp3',
+  '34_Taekwondo.mp3',
+  '35_Send_four_pm_swimmers.mp3',
+  '36_Teabreak_TV_milk.mp3',
+  '37_Shane_bag_PS_teacher.mp3'
 ].map(f => './' + f);
 const CORE = [
   './',

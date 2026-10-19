@@ -142,6 +142,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
   <div class="row" style="margin-top:12px">
     <button class="primary" id="addAlarmBtn">＋ 新建闹钟</button>
     <button id="addGroupBtn">＋ 新建分组</button>
+    <button id="restorePresetBtn">恢复预设闹钟</button>
   </div>
   <div id="groupList"></div>
 </section>
@@ -173,7 +174,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
 <section id="pLib" class="page">
   <div class="card">
     <label class="upload">上传铃声 / 语音<input type="file" id="fileIn" accept="audio/*,.mp3,.m4a,.wav,.aac,.caf" multiple></label>
-    <div class="muted" style="margin-top:8px">上传的音频只保存在本机（不上传到任何服务器），断网也能用。每个闹钟可选一个“铃声”和一个“语音”：先响一遍铃声，再把语音读两遍，然后自动结束。建议用 mp3 / m4a / wav 格式。</div>
+    <div class="muted" style="margin-top:8px">上传的音频只保存在本机（不上传到任何服务器），断网也能用。每个闹钟可选一个“铃声”和一个“语音”：先响一遍铃声，再把语音文件完整播放一次，然后自动结束。语音文件请自带“读两遍”（例如读一遍、停 2 秒、再读一遍）。建议用 mp3 / m4a / wav 格式。</div>
   </div>
   <div class="card">
     <h2>预置音频</h2>
@@ -221,7 +222,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
     <div class="days7" id="fDays" style="margin-top:8px"></div>
     <label class="f">铃声</label>
     <select id="fRing"></select>
-    <label class="f">语音（可选，铃声响完后读两遍）</label>
+    <label class="f">语音（可选，铃声响完后播放一次，文件内自带两遍）</label>
     <select id="fVoice"></select>
     <label class="f">备注</label>
     <input type="text" id="fNote" maxlength="60" placeholder="例如：第一节课">
@@ -252,7 +253,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
 <script>
 'use strict';
 /* ========== 版本：每次改版同时修改这里和 sw.js 里的 VERSION ========== */
-const APP_VERSION = '1.1.2';
+const APP_VERSION = '1.2.0';
 const CACHE_NAME = 'sg-alarm-v' + APP_VERSION;
 
 const SGT = 8 * 3600000, DAY = 86400000, MISS_WINDOW = 30 * 60000, SNOOZE_MS = 60000;
@@ -413,8 +414,813 @@ const PRESETS = [
   {id:'preset:06', name:'06_Remember_the_milk.mp3', file:'06_Remember_the_milk.mp3'},
   {id:'preset:07', name:'07_Transport_go_toilet.mp3', file:'07_Transport_go_toilet.mp3'},
   {id:'preset:08', name:'08_Transport_go_to_lobby.mp3', file:'08_Transport_go_to_lobby.mp3'},
-  {id:'preset:09', name:'09_Fetch_the_gym_student.mp3', file:'09_Fetch_the_gym_student.mp3'}
+  {id:'preset:09', name:'09_Fetch_the_gym_student.mp3', file:'09_Fetch_the_gym_student.mp3'},
+  {id:'preset:10', name:'10_Fetch_the_robotic_students.mp3', file:'10_Fetch_the_robotic_students.mp3'},
+  {id:'preset:11', name:'11_Janelle_Lim_level3_gym.mp3', file:'11_Janelle_Lim_level3_gym.mp3'},
+  {id:'preset:12', name:'12_Kidz_Amaze_count_heads.mp3', file:'12_Kidz_Amaze_count_heads.mp3'},
+  {id:'preset:13', name:'13_Kidz_Amaze_back_teabreak.mp3', file:'13_Kidz_Amaze_back_teabreak.mp3'},
+  {id:'preset:14', name:'14_Olivia_Lim_Julia_level3_gym.mp3', file:'14_Olivia_Lim_Julia_level3_gym.mp3'},
+  {id:'preset:15', name:'15_Ann_Yee_level3_gym.mp3', file:'15_Ann_Yee_level3_gym.mp3'},
+  {id:'preset:16', name:'16_Watch_for_Julia.mp3', file:'16_Watch_for_Julia.mp3'},
+  {id:'preset:17', name:'17_Yu_Cheng_level3_ICR.mp3', file:'17_Yu_Cheng_level3_ICR.mp3'},
+  {id:'preset:18', name:'18_Shane_ICR.mp3', file:'18_Shane_ICR.mp3'},
+  {id:'preset:19', name:'19_Ann_Yu_Clarys_gym.mp3', file:'19_Ann_Yu_Clarys_gym.mp3'},
+  {id:'preset:20', name:'20_Teabreak_milk.mp3', file:'20_Teabreak_milk.mp3'},
+  {id:'preset:21', name:'21_Pack_Shane_bag.mp3', file:'21_Pack_Shane_bag.mp3'},
+  {id:'preset:22', name:'22_Seraphina_Jing_Ting_swim.mp3', file:'22_Seraphina_Jing_Ting_swim.mp3'},
+  {id:'preset:23', name:'23_Level3_ICR_four_students.mp3', file:'23_Level3_ICR_four_students.mp3'},
+  {id:'preset:24', name:'24_Level2_water_play.mp3', file:'24_Level2_water_play.mp3'},
+  {id:'preset:25', name:'25_Thursday_swimmers.mp3', file:'25_Thursday_swimmers.mp3'},
+  {id:'preset:26', name:'26_Water_play_shower.mp3', file:'26_Water_play_shower.mp3'},
+  {id:'preset:27', name:'27_Water_play_upstairs.mp3', file:'27_Water_play_upstairs.mp3'},
+  {id:'preset:28', name:'28_Water_play_teabreak.mp3', file:'28_Water_play_teabreak.mp3'},
+  {id:'preset:29', name:'29_Five_pm_swimmers_upstairs.mp3', file:'29_Five_pm_swimmers_upstairs.mp3'},
+  {id:'preset:30', name:'30_Nathanael_level3_ICR.mp3', file:'30_Nathanael_level3_ICR.mp3'},
+  {id:'preset:31', name:'31_Desiree_go_home.mp3', file:'31_Desiree_go_home.mp3'},
+  {id:'preset:32', name:'32_Yi_Zhen_Jun_Yi_swimming.mp3', file:'32_Yi_Zhen_Jun_Yi_swimming.mp3'},
+  {id:'preset:33', name:'33_Four_pm_swimmers_change.mp3', file:'33_Four_pm_swimmers_change.mp3'},
+  {id:'preset:34', name:'34_Taekwondo.mp3', file:'34_Taekwondo.mp3'},
+  {id:'preset:35', name:'35_Send_four_pm_swimmers.mp3', file:'35_Send_four_pm_swimmers.mp3'},
+  {id:'preset:36', name:'36_Teabreak_TV_milk.mp3', file:'36_Teabreak_TV_milk.mp3'},
+  {id:'preset:37', name:'37_Shane_bag_PS_teacher.mp3', file:'37_Shane_bag_PS_teacher.mp3'}
 ];
+
+/* ---------- 预设闹钟（根据纸本日程整理；首次打开时自动导入，导入后可在手机上随意编辑） ---------- */
+const PRESET_ALARM_VERSION = 1;
+const PRESET_GROUPS = [["p_daily", "每日"], ["p_bus", "校车"], ["p_mon", "周一"], ["p_tue", "周二"], ["p_wed", "周三"], ["p_thu", "周四"], ["p_fri", "周五"]];
+const PRESET_ALARMS = [
+{
+"id": "p:p_daily:13:10:12345",
+"group": "p_daily",
+"days": [
+1,
+2,
+3,
+4,
+5
+],
+"time": "13:10",
+"voice": "preset:01",
+"note": "去停车场"
+},
+{
+"id": "p:p_mon:15:20:1",
+"group": "p_mon",
+"days": [
+1
+],
+"time": "15:20",
+"voice": "preset:02",
+"note": "送 Jin Wai level 2 math photo，带书包，3:50 不接 5:00"
+},
+{
+"id": "p:p_mon:15:52:1",
+"group": "p_mon",
+"days": [
+1
+],
+"time": "15:52",
+"voice": "preset:03",
+"note": "送 Ann Yu、Clarys level 3 GYM photo"
+},
+{
+"id": "p:p_mon:16:00:1",
+"group": "p_mon",
+"days": [
+1
+],
+"time": "16:00",
+"voice": "preset:04",
+"note": "Seraphina to Jing Ting's grandfather"
+},
+{
+"id": "p:p_mon:16:10:1",
+"group": "p_mon",
+"days": [
+1
+],
+"time": "16:10",
+"voice": "preset:05",
+"note": "Robotic：Justin、Haylene 去 HP 课室（4:15–5:15）"
+},
+{
+"id": "p:p_mon:16:30:1",
+"group": "p_mon",
+"days": [
+1
+],
+"time": "16:30",
+"voice": "preset:06",
+"note": "teabreak ★Julia、Nerariss 牛奶"
+},
+{
+"id": "p:p_mon:17:15:1",
+"group": "p_mon",
+"days": [
+1
+],
+"time": "17:15",
+"voice": "preset:10",
+"note": "接 Robotic（Justin、Haylene）"
+},
+{
+"id": "p:p_mon:18:15:1",
+"group": "p_mon",
+"days": [
+1
+],
+"time": "18:15",
+"voice": "preset:09",
+"note": "接 GYM 学生"
+},
+{
+"id": "p:p_tue:14:55:2",
+"group": "p_tue",
+"days": [
+2
+],
+"time": "14:55",
+"voice": "preset:11",
+"note": "送 Janelle Lim level 3 GYM photo"
+},
+{
+"id": "p:p_tue:15:25:2",
+"group": "p_tue",
+"days": [
+2
+],
+"time": "15:25",
+"voice": "preset:12",
+"note": "数人数 kidz amaze，带水杯、袜子（校车学生带书包）"
+},
+{
+"id": "p:p_tue:15:30:2",
+"group": "p_tue",
+"days": [
+2
+],
+"time": "15:30",
+"voice": "preset:05",
+"note": "Robotic（KA 课室，3:30–4:30）：Clara、Meredith、Nedra、En Ning"
+},
+{
+"id": "p:p_tue:16:30:2",
+"group": "p_tue",
+"days": [
+2
+],
+"time": "16:30",
+"voice": "preset:13",
+"note": "送 kidz amaze 回 KA Class / teabreak / ★Julia、Nerariss 牛奶"
+},
+{
+"id": "p:p_tue:16:55:2",
+"group": "p_tue",
+"days": [
+2
+],
+"time": "16:55",
+"voice": "preset:14",
+"note": "送 Olivia Lim、Julia level 3 GYM photo"
+},
+{
+"id": "p:p_tue:17:25:2",
+"group": "p_tue",
+"days": [
+2
+],
+"time": "17:25",
+"voice": "preset:15",
+"note": "送 Ann Yee level 3 GYM photo，背书包"
+},
+{
+"id": "p:p_tue:18:00:2",
+"group": "p_tue",
+"days": [
+2
+],
+"time": "18:00",
+"voice": "preset:16",
+"note": "看 Julia 回来（Julia、Raven，楼上 Chloe）"
+},
+{
+"id": "p:p_wed:14:40:3",
+"group": "p_wed",
+"days": [
+3
+],
+"time": "14:40",
+"voice": "preset:17",
+"note": "送 Yu Cheng level 3 ICR photo，留 teabreak"
+},
+{
+"id": "p:p_wed:15:25:3",
+"group": "p_wed",
+"days": [
+3
+],
+"time": "15:25",
+"voice": "preset:18",
+"note": "送 Shane ICR photo，留 teabreak"
+},
+{
+"id": "p:p_wed:15:55:3",
+"group": "p_wed",
+"days": [
+3
+],
+"time": "15:55",
+"voice": "preset:19",
+"note": "送 Ann Yu、Clarys GYM photo，留 teabreak，6:15 结束"
+},
+{
+"id": "p:p_wed:16:30:3",
+"group": "p_wed",
+"days": [
+3
+],
+"time": "16:30",
+"voice": "preset:20",
+"note": "teabreak ★Julia、Nerariss 牛奶"
+},
+{
+"id": "p:p_wed:17:00:3",
+"group": "p_wed",
+"days": [
+3
+],
+"time": "17:00",
+"voice": "preset:21",
+"note": "提前收拾 Shane 书包，找 Shane 回来"
+},
+{
+"id": "p:p_wed:18:15:3",
+"group": "p_wed",
+"days": [
+3
+],
+"time": "18:15",
+"voice": "preset:09",
+"note": "接 GYM 学生"
+},
+{
+"id": "p:p_thu:14:55:4",
+"group": "p_thu",
+"days": [
+4
+],
+"time": "14:55",
+"voice": "preset:22",
+"note": "送 Seraphina、Jing Ting 2人去 swim（3pm David Tan），不需拍照"
+},
+{
+"id": "p:p_thu:15:10:4",
+"group": "p_thu",
+"days": [
+4
+],
+"time": "15:10",
+"voice": "preset:23",
+"note": "送 Clara、Ann Yee、Jin Wai、En Ning level 3 ICR 拍照"
+},
+{
+"id": "p:p_thu:15:30:4",
+"group": "p_thu",
+"days": [
+4
+],
+"time": "15:30",
+"voice": "preset:24",
+"note": "计算人数，level 2 玩水"
+},
+{
+"id": "p:p_thu:15:55:4",
+"group": "p_thu",
+"days": [
+4
+],
+"time": "15:55",
+"voice": "preset:25",
+"note": "送 5人去 swim（4pm）：Claire、Yu Cheng、Janelle Lim（Gavin）；Nedra、Amelia Boo（David Tan，Amelia Boo 申调 3pm）"
+},
+{
+"id": "p:p_thu:16:30:4",
+"group": "p_thu",
+"days": [
+4
+],
+"time": "16:30",
+"voice": "preset:26",
+"note": "所有玩水的去冲凉"
+},
+{
+"id": "p:p_thu:16:45:4",
+"group": "p_thu",
+"days": [
+4
+],
+"time": "16:45",
+"voice": "preset:27",
+"note": "计算人数，玩水学生上楼"
+},
+{
+"id": "p:p_thu:16:50:4",
+"group": "p_thu",
+"days": [
+4
+],
+"time": "16:50",
+"voice": "preset:28",
+"note": "玩水学生 teabreak，校车学生先吃"
+},
+{
+"id": "p:p_thu:17:00:4",
+"group": "p_thu",
+"days": [
+4
+],
+"time": "17:00",
+"voice": "preset:29",
+"note": "带 5pm 结束游泳的学生上楼（5人）"
+},
+{
+"id": "p:p_thu:17:25:4",
+"group": "p_thu",
+"days": [
+4
+],
+"time": "17:25",
+"voice": "preset:30",
+"note": "Nathanael level 3 ICR 拍照"
+},
+{
+"id": "p:p_fri:14:30:5",
+"group": "p_fri",
+"days": [
+5
+],
+"time": "14:30",
+"voice": "preset:31",
+"note": "Desiree 回家，不换衣，先吃点心"
+},
+{
+"id": "p:p_fri:14:55:5",
+"group": "p_fri",
+"days": [
+5
+],
+"time": "14:55",
+"voice": "preset:32",
+"note": "Yi Zhen、Jun Yi swimming（3pm Yong Jun），拍视频"
+},
+{
+"id": "p:p_fri:15:30:5",
+"group": "p_fri",
+"days": [
+5
+],
+"time": "15:30",
+"voice": "preset:33",
+"note": "4pm 游泳的人换衣"
+},
+{
+"id": "p:p_fri:15:45:5",
+"group": "p_fri",
+"days": [
+5
+],
+"time": "15:45",
+"voice": "preset:34",
+"note": "Taekwondo 换衣，送 Nedra、Renuka、Julia、Narisse（机动）4人，拍照"
+},
+{
+"id": "p:p_fri:15:55:5",
+"group": "p_fri",
+"days": [
+5
+],
+"time": "15:55",
+"voice": "preset:35",
+"note": "送 4pm swimmers 9人，拍视频：Amelia Mikayla、Matthew、Keagan（Gavin）；Raven、Shane（Yong Jun）；Caden、Olivia Chai、Ian、Amelia Yan（Jordan）。接 Yi Zhen、Jun Yi 回来"
+},
+{
+"id": "p:p_fri:16:30:5",
+"group": "p_fri",
+"days": [
+5
+],
+"time": "16:30",
+"voice": "preset:36",
+"note": "Teabreak，提醒 Julia、Nerariss 牛奶；TV；send HP Qian Xun"
+},
+{
+"id": "p:p_fri:16:45:5",
+"group": "p_fri",
+"days": [
+5
+],
+"time": "16:45",
+"voice": "preset:37",
+"note": "带 Shane 书包、点心给 PS 老师；计算人数，带 5pm 结束的 swimmers 回来（9人）"
+},
+{
+"id": "p:p_bus:16:50:1",
+"group": "p_bus",
+"days": [
+1
+],
+"time": "16:50",
+"voice": "preset:07",
+"note": "校车学生上厕所 ★Jun Yi、Jing Qi ③"
+},
+{
+"id": "p:p_bus:17:00:1",
+"group": "p_bus",
+"days": [
+1
+],
+"time": "17:00",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+},
+{
+"id": "p:p_bus:17:20:1",
+"group": "p_bus",
+"days": [
+1
+],
+"time": "17:20",
+"voice": "preset:07",
+"note": "校车学生上厕所"
+},
+{
+"id": "p:p_bus:17:30:1",
+"group": "p_bus",
+"days": [
+1
+],
+"time": "17:30",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+},
+{
+"id": "p:p_bus:18:00:1",
+"group": "p_bus",
+"days": [
+1
+],
+"time": "18:00",
+"voice": "preset:07",
+"note": "校车学生上厕所 ★Yu Cheng、Raven、Amelia、Charlotte ⑤，楼上 Chloe"
+},
+{
+"id": "p:p_bus:18:10:1",
+"group": "p_bus",
+"days": [
+1
+],
+"time": "18:10",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+},
+{
+"id": "p:p_bus:16:20:2",
+"group": "p_bus",
+"days": [
+2
+],
+"time": "16:20",
+"voice": "preset:07",
+"note": "校车学生上厕所 ★Haylene ①"
+},
+{
+"id": "p:p_bus:16:35:2",
+"group": "p_bus",
+"days": [
+2
+],
+"time": "16:35",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+},
+{
+"id": "p:p_bus:16:50:2",
+"group": "p_bus",
+"days": [
+2
+],
+"time": "16:50",
+"voice": "preset:07",
+"note": "校车学生上厕所 ★Jing Qi、Qian Xun"
+},
+{
+"id": "p:p_bus:17:00:2",
+"group": "p_bus",
+"days": [
+2
+],
+"time": "17:00",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+},
+{
+"id": "p:p_bus:17:20:2",
+"group": "p_bus",
+"days": [
+2
+],
+"time": "17:20",
+"voice": "preset:07",
+"note": "校车学生上厕所 ★Janelle Lim、Jason（HP）②"
+},
+{
+"id": "p:p_bus:17:30:2",
+"group": "p_bus",
+"days": [
+2
+],
+"time": "17:30",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+},
+{
+"id": "p:p_bus:18:00:2",
+"group": "p_bus",
+"days": [
+2
+],
+"time": "18:00",
+"voice": "preset:07",
+"note": "校车学生上厕所 ★Charlotte、Jun Yi、Yu Cheng、Amelia ⑤"
+},
+{
+"id": "p:p_bus:18:10:2",
+"group": "p_bus",
+"days": [
+2
+],
+"time": "18:10",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+},
+{
+"id": "p:p_bus:16:20:3",
+"group": "p_bus",
+"days": [
+3
+],
+"time": "16:20",
+"voice": "preset:07",
+"note": "校车学生上厕所 ★Haylene ①"
+},
+{
+"id": "p:p_bus:16:35:3",
+"group": "p_bus",
+"days": [
+3
+],
+"time": "16:35",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+},
+{
+"id": "p:p_bus:16:50:3",
+"group": "p_bus",
+"days": [
+3
+],
+"time": "16:50",
+"voice": "preset:07",
+"note": "校车学生上厕所 ★Shane、Jing Qi、Julia、Jun Yi ④"
+},
+{
+"id": "p:p_bus:17:00:3",
+"group": "p_bus",
+"days": [
+3
+],
+"time": "17:00",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+},
+{
+"id": "p:p_bus:17:20:3",
+"group": "p_bus",
+"days": [
+3
+],
+"time": "17:20",
+"voice": "preset:07",
+"note": "校车学生上厕所 ★Janelle Lim、Chloe ②"
+},
+{
+"id": "p:p_bus:17:30:3",
+"group": "p_bus",
+"days": [
+3
+],
+"time": "17:30",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+},
+{
+"id": "p:p_bus:18:00:3",
+"group": "p_bus",
+"days": [
+3
+],
+"time": "18:00",
+"voice": "preset:07",
+"note": "校车学生上厕所 ★Charlotte、Raven、Yu Cheng、Amelia ④"
+},
+{
+"id": "p:p_bus:18:10:3",
+"group": "p_bus",
+"days": [
+3
+],
+"time": "18:10",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+},
+{
+"id": "p:p_bus:16:20:4",
+"group": "p_bus",
+"days": [
+4
+],
+"time": "16:20",
+"voice": "preset:07",
+"note": "校车学生上厕所"
+},
+{
+"id": "p:p_bus:16:35:4",
+"group": "p_bus",
+"days": [
+4
+],
+"time": "16:35",
+"voice": "preset:08",
+"note": "校车学生去 lobby ★Haylene ①"
+},
+{
+"id": "p:p_bus:16:50:4",
+"group": "p_bus",
+"days": [
+4
+],
+"time": "16:50",
+"voice": "preset:07",
+"note": "校车学生上厕所"
+},
+{
+"id": "p:p_bus:17:00:4",
+"group": "p_bus",
+"days": [
+4
+],
+"time": "17:00",
+"voice": "preset:08",
+"note": "校车学生去 lobby ★Jing Qi、Shane、Julia"
+},
+{
+"id": "p:p_bus:17:20:4",
+"group": "p_bus",
+"days": [
+4
+],
+"time": "17:20",
+"voice": "preset:07",
+"note": "校车学生上厕所 ★Janelle Lim ③"
+},
+{
+"id": "p:p_bus:17:30:4",
+"group": "p_bus",
+"days": [
+4
+],
+"time": "17:30",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+},
+{
+"id": "p:p_bus:18:00:4",
+"group": "p_bus",
+"days": [
+4
+],
+"time": "18:00",
+"voice": "preset:07",
+"note": "校车学生上厕所 ★Yu Cheng、Charlotte ⑤"
+},
+{
+"id": "p:p_bus:18:10:4",
+"group": "p_bus",
+"days": [
+4
+],
+"time": "18:10",
+"voice": "preset:08",
+"note": "校车学生去 lobby ★Jun Yi、Amelia、Raven ②"
+},
+{
+"id": "p:p_bus:16:20:5",
+"group": "p_bus",
+"days": [
+5
+],
+"time": "16:20",
+"voice": "preset:07",
+"note": "校车学生上厕所"
+},
+{
+"id": "p:p_bus:16:35:5",
+"group": "p_bus",
+"days": [
+5
+],
+"time": "16:35",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+},
+{
+"id": "p:p_bus:16:50:5",
+"group": "p_bus",
+"days": [
+5
+],
+"time": "16:50",
+"voice": "preset:07",
+"note": "校车学生上厕所 ★Shane、Jun Yi（2）"
+},
+{
+"id": "p:p_bus:17:00:5",
+"group": "p_bus",
+"days": [
+5
+],
+"time": "17:00",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+},
+{
+"id": "p:p_bus:17:20:5",
+"group": "p_bus",
+"days": [
+5
+],
+"time": "17:20",
+"voice": "preset:07",
+"note": "校车学生上厕所 ★Janelle Lim、HP Jason（2）"
+},
+{
+"id": "p:p_bus:17:30:5",
+"group": "p_bus",
+"days": [
+5
+],
+"time": "17:30",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+},
+{
+"id": "p:p_bus:18:00:5",
+"group": "p_bus",
+"days": [
+5
+],
+"time": "18:00",
+"voice": "preset:07",
+"note": "校车学生上厕所 ★Raven、Jun Yi、Charlotte、HP Chloe（4）"
+},
+{
+"id": "p:p_bus:18:10:5",
+"group": "p_bus",
+"days": [
+5
+],
+"time": "18:10",
+"voice": "preset:08",
+"note": "校车学生去 lobby"
+}
+];
+function importPresetAlarms(restore){
+  for (const [id, name] of PRESET_GROUPS)
+    if (!groups.find(g => g.id === id)) groups.push({id, name, enabled:true, sound:true, vibrate:false, popup:true});
+  if (restore) alarms = alarms.filter(a => !String(a.id).startsWith('p:'));
+  let n = 0;
+  for (const p of PRESET_ALARMS){
+    if (alarms.find(a => a.id === p.id)) continue;
+    const weekdays = p.days.length === 5;
+    alarms.push({id:p.id, enabled:true, onceAfter:0, time:p.time,
+      repeat: weekdays ? {type:'weekday', days:[]} : {type:'custom', days:p.days.slice()},
+      ring:'builtin:1', voice:p.voice, note:p.note, groupId:p.group});
+    n++;
+  }
+  store.set('presetVer', PRESET_ALARM_VERSION); saveGroups(); saveAlarms();
+  log((restore ? '已恢复' : '已导入') + `预设闹钟 ${n} 个`);
+}
+
 const presetURL = {};
 // 预先把文件读成本地 Blob 地址：播放时不再走网络/缓存，切换下一段可以立即开始
 async function loadPresets(){
@@ -478,8 +1284,9 @@ function stopPlayback(resume = true){
   try { player.pause(); } catch(e){}
   if (resume) resumeKeep();
 }
-function sequenceFor(a){ const u = [audioURL(a.ring)]; if (a.voice){ const v = audioURL(a.voice); u.push(v, v); } return u; }
-const STEP_TEXT = ['正在响铃声…', '正在读语音（第 1 遍）…', '正在读语音（第 2 遍）…'];
+// 语音文件本身已录好两遍（中间的停顿在文件里），所以只播放一次，第二遍完全不依赖定时器
+function sequenceFor(a){ const u = [audioURL(a.ring)]; if (a.voice) u.push(audioURL(a.voice)); return u; }
+const STEP_TEXT = ['正在响铃声…', '正在播放语音（文件内两遍）…'];
 
 /* ---------- 启用闹钟（解锁声音 + 静音保活 + 屏幕常亮） ---------- */
 let wakeLock = null;
@@ -651,7 +1458,7 @@ function startRing(it){
   if (g.sound){
     playList(sequenceFor(a), i => {
       $('#ringStatus').textContent = STEP_TEXT[i] || '';
-      if (i === 2) log('语音第 2 遍开始（由第 1 遍“播放结束”事件直接触发）');
+      if (i === 1) log('铃声结束，开始播放语音（由“播放结束”事件直接触发）');
     }, ok => {
       if (ok){ log('播放完毕，自动结束'); finishRing(); }
       else if (g.popup){ $('#ringStatus').textContent = '声音被系统拦截（未点「启用闹钟」），30 秒后自动收起'; ringTimer = setTimeout(finishRing, 30000); }
@@ -884,6 +1691,10 @@ $('#enableBtn').onclick = enableAlarms;
 $('#snoozeBtn').onclick = snooze;
 $('#bannerSnooze').onclick = snooze;
 $('#addAlarmBtn').onclick = () => openEditor(null);
+$('#restorePresetBtn').onclick = () => {
+  if (!confirm(`把预设闹钟（共 ${PRESET_ALARMS.length} 个）恢复成原始内容？\n你改过或删掉的预设闹钟会被还原；你自己新建的闹钟不受影响。`)) return;
+  importPresetAlarms(true); renderAlarms(); renderNext();
+};
 $('#addGroupBtn').onclick = () => {
   const n = prompt('新分组名称（例如：上课）'); if (!n || !n.trim()) return;
   groups.push({id:'g' + uid(), name:n.trim().slice(0, 20), enabled:true, sound:true, vibrate:false, popup:true});
@@ -947,6 +1758,7 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:'){
 (async function init(){
   const standalone = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches;
   log(`页面启动 v${APP_VERSION}（${standalone ? '主屏幕应用模式' : '浏览器模式'}）`);
+  if (store.get('presetVer', 0) < PRESET_ALARM_VERSION) importPresetAlarms(false);
   const p = sgt(Date.now()); calY = p.y; calM = p.m;
   renderEnable(); renderClock(); renderNext(); renderAlarms(); renderCal(); renderLib(); renderLog();
   await Promise.all([loadLibrary(), loadPresets()]);
