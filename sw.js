@@ -2,7 +2,7 @@
  * 策略：联网时先取最新文件（并更新缓存），断网时才用缓存。
  * 每次改版：把 VERSION 改成和 index.html 里 APP_VERSION 一样的新号。
  */
-const VERSION = '1.1.1';
+const VERSION = '1.1.2';
 const CACHE = 'sg-alarm-v' + VERSION;
 const AUDIO = [
   '01_Time_to_go_carpark.mp3',
@@ -14,21 +14,21 @@ const AUDIO = [
   '07_Transport_go_toilet.mp3',
   '08_Transport_go_to_lobby.mp3',
   '09_Fetch_the_gym_student.mp3'
-].map(f => './audio/' + f);
+].map(f => './' + f);
 const CORE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './icons/icon-180.png',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
+  './icon-180.png',
+  './icon-192.png',
+  './icon-512.png',
   ...AUDIO
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE)
-      .then(c => c.addAll(CORE.map(u => new Request(u, {cache: 'reload'}))))
+      .then(c => Promise.allSettled(CORE.map(u => c.add(new Request(u, {cache: 'reload'})))))
       .then(() => self.skipWaiting())
   );
 });

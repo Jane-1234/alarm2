@@ -9,8 +9,8 @@
 <meta name="apple-mobile-web-app-title" content="新加坡闹钟">
 <meta name="theme-color" content="#c8102e">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/icon-180.png">
-<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <title>新加坡闹钟</title>
 <style>
 :root{
@@ -252,7 +252,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
 <script>
 'use strict';
 /* ========== 版本：每次改版同时修改这里和 sw.js 里的 VERSION ========== */
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.1.2';
 const CACHE_NAME = 'sg-alarm-v' + APP_VERSION;
 
 const SGT = 8 * 3600000, DAY = 86400000, MISS_WINDOW = 30 * 60000, SNOOZE_MS = 60000;
@@ -403,7 +403,7 @@ async function deleteLib(id){
   alarms.forEach(a => { if (a.ring === id) a.ring = 'builtin:1'; if (a.voice === id) a.voice = ''; });
   saveAlarms(); log('音频库：已删除“' + it.name + '”'); renderLib(); renderAlarms();
 }
-/* ---------- 预置音频（放在 audio/ 文件夹，由离线缓存脚本缓存） ---------- */
+/* ---------- 预置音频（与 index.html 放在同一层，由离线缓存脚本缓存） ---------- */
 const PRESETS = [
   {id:'preset:01', name:'01_Time_to_go_carpark.mp3', file:'01_Time_to_go_carpark.mp3'},
   {id:'preset:02', name:'02_Math_lesson.mp3', file:'02_Math_lesson.mp3'},
@@ -421,7 +421,7 @@ async function loadPresets(){
   let ok = 0;
   await Promise.all(PRESETS.map(async p => {
     try {
-      const r = await fetch('audio/' + p.file);
+      const r = await fetch(p.file);
       if (!r.ok) throw new Error('HTTP ' + r.status);
       presetURL[p.id] = URL.createObjectURL(await r.blob()); ok++;
     } catch(e){ log(`预置音频“${p.name}”加载失败：${e.message}`); }
@@ -432,7 +432,7 @@ function audioURL(id){
   if (id && id.startsWith('lib:') && LIB.urls[id]) return LIB.urls[id];
   if (id && id.startsWith('preset:')){
     if (presetURL[id]) return presetURL[id];
-    const p = PRESETS.find(x => x.id === id); if (p) return 'audio/' + p.file;
+    const p = PRESETS.find(x => x.id === id); if (p) return p.file;
   }
   return getBuiltinURL(id);
 }
