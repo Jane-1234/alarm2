@@ -1,0 +1,959 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="新加坡闹钟">
+<meta name="theme-color" content="#c8102e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<title>新加坡闹钟</title>
+<style>
+:root{
+  --bg:#f2f2f7;--card:#fff;--text:#1c1c1e;--muted:#6e6e73;--line:#e2e2e7;
+  --accent:#c8102e;--blue:#0a64d8;--holiday:#d70015;--holiday-bg:#ffecee;
+  --mute-bg:#e9e9ee;--ok:#1f8a3a;--chip:#f0f0f4;--shadow:0 1px 3px rgba(0,0,0,.08);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#000;--card:#1c1c1e;--text:#f2f2f7;--muted:#a1a1a6;--line:#2c2c2e;
+  --accent:#ff4d5e;--blue:#4ea1ff;--holiday:#ff5c6c;--holiday-bg:#3a1418;
+  --mute-bg:#2c2c2e;--ok:#3ccf6a;--chip:#2c2c2e;--shadow:none}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font:16px/1.45 -apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+  padding:calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 24px);max-width:640px;margin:0 auto}
+button{font:inherit;color:inherit;border:0;background:var(--chip);border-radius:10px;padding:8px 12px;cursor:pointer}
+button.primary{background:var(--accent);color:#fff;font-weight:600}
+button.blue{background:var(--blue);color:#fff}
+button.danger{color:var(--holiday)}
+button:disabled{opacity:.45}
+input,select,textarea{font:inherit;color:var(--text);background:var(--chip);border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%}
+.card{background:var(--card);border-radius:14px;padding:14px;margin:12px 0;box-shadow:var(--shadow)}
+.muted{color:var(--muted);font-size:13px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.spacer{flex:1}
+h2{font-size:17px;margin:0}
+/* 时钟 */
+#clock{font-size:52px;font-weight:300;letter-spacing:1px;font-variant-numeric:tabular-nums;line-height:1.1}
+#dateLine{font-size:15px;margin-top:2px}
+#todayTag{color:var(--holiday);font-weight:600}
+#nextLine{margin-top:8px;font-size:15px}
+#enableBtn{width:100%;padding:13px;font-size:17px;margin-top:10px}
+#enableBtn.on{background:var(--ok)}
+#tipLine{margin-top:8px;font-size:13px;color:var(--muted);min-height:0}
+/* 标签页 */
+.tabs{display:flex;background:var(--chip);border-radius:10px;padding:3px;gap:3px;margin-top:12px}
+.tabs button{flex:1;background:transparent;padding:7px 0;font-size:15px}
+.tabs button.act{background:var(--card);box-shadow:var(--shadow);font-weight:600}
+.page{display:none}.page.act{display:block}
+/* 开关 */
+.sw{position:relative;width:51px;height:31px;flex:none}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw span{position:absolute;inset:0;background:#c7c7cc;border-radius:31px;transition:.2s}
+.sw span:before{content:"";position:absolute;width:27px;height:27px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw input:checked+span{background:#34c759}
+.sw input:checked+span:before{transform:translateX(20px)}
+/* 分组 */
+.gHead{display:flex;align-items:center;gap:8px}
+.gName{font-weight:600;font-size:17px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modes{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}
+.modes label{display:flex;align-items:center;gap:5px;background:var(--chip);border-radius:20px;padding:5px 10px;font-size:14px}
+.modes input{width:auto;margin:0}
+.gDesc{font-size:13px;color:var(--muted)}
+.alarm{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.alarm .t{font-size:32px;font-weight:300;font-variant-numeric:tabular-nums;line-height:1.1}
+.alarm .info{flex:1;min-width:0}
+.alarm .info div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.alarm.off .t,.alarm.off .info{opacity:.45}
+.empty{padding:10px 0;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
+/* 日历 */
+.calHead{display:flex;align-items:center;gap:8px}
+.calHead h2{flex:1;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px}
+.grid .wh{text-align:center;font-size:12px;color:var(--muted);padding:2px 0}
+.grid .wh.we{color:var(--holiday)}
+.day{min-height:58px;border-radius:9px;padding:4px 2px;text-align:center;background:transparent;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:16px}
+.day .n{font-variant-numeric:tabular-nums}
+.day .hn{font-size:9.5px;line-height:1.15;color:var(--holiday);word-break:break-all}
+.day.hol{background:var(--holiday-bg)}
+.day.hol .n{color:var(--holiday);font-weight:700}
+.day.today{outline:2px solid var(--blue);outline-offset:-2px}
+.day.mute{background:var(--mute-bg)}
+.day.mute .n{text-decoration:line-through;opacity:.7}
+.day .mi{font-size:11px}
+.day.blank{visibility:hidden}
+.holList{margin:8px 0 0;padding:0;list-style:none}
+.holList li{display:flex;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+.holList .d{color:var(--holiday);font-weight:600;min-width:92px;font-variant-numeric:tabular-nums}
+/* 音频库 */
+.libItem{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--line)}
+.libItem .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.upload{display:block;text-align:center;background:var(--blue);color:#fff;border-radius:10px;padding:11px;font-weight:600}
+.upload input{display:none}
+/* 弹层 */
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:50}
+.mask.show{display:flex}
+.sheet{background:var(--card);width:100%;max-width:640px;border-radius:16px 16px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);max-height:92vh;overflow:auto}
+.sheet label.f{display:block;margin:12px 0 4px;font-size:14px;color:var(--muted)}
+.days7{display:flex;gap:4px}
+.days7 label{flex:1;text-align:center;background:var(--chip);border-radius:8px;padding:6px 0;font-size:14px}
+.days7 input{display:none}
+.days7 label.on{background:var(--blue);color:#fff}
+#ringMask{align-items:center;z-index:80;background:rgba(0,0,0,.6)}
+.ringBox{background:var(--card);border-radius:20px;padding:26px 20px;width:calc(100% - 32px);max-width:420px;text-align:center}
+.ringBox .big{font-size:60px;font-weight:300;font-variant-numeric:tabular-nums}
+#ringNote{font-size:19px;margin:6px 0;word-break:break-word}
+#ringStatus{color:var(--muted);font-size:14px;margin-bottom:18px}
+#snoozeBtn{width:100%;padding:14px;font-size:18px}
+#banner{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 8px);background:var(--card);border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.25);padding:10px 12px;display:none;align-items:center;gap:8px;z-index:70;max-width:616px;margin:0 auto}
+#banner.show{display:flex}
+/* 运行记录 */
+details{margin-top:12px}
+summary{font-weight:600;cursor:pointer}
+#logBox{font:12px/1.5 ui-monospace,Menlo,monospace;max-height:300px;overflow:auto;margin-top:8px;white-space:pre-wrap;word-break:break-all}
+footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="muted">新加坡时间（SGT，UTC+8）· 不受手机时区影响</div>
+  <div id="clock">--:--:--</div>
+  <div id="dateLine"></div>
+  <div id="nextLine" class="muted"></div>
+  <button id="enableBtn" class="primary">启用闹钟</button>
+  <div id="enableNote" class="muted" style="margin-top:6px">iPhone 要求先点一下才允许出声。每次重新打开应用都需要再点一次。</div>
+  <div id="tipLine"></div>
+</div>
+
+<div class="tabs">
+  <button data-tab="pAlarms" class="act">闹钟</button>
+  <button data-tab="pCal">万年历</button>
+  <button data-tab="pLib">音频库</button>
+</div>
+
+<!-- 闹钟页 -->
+<section id="pAlarms" class="page act">
+  <div class="row" style="margin-top:12px">
+    <button class="primary" id="addAlarmBtn">＋ 新建闹钟</button>
+    <button id="addGroupBtn">＋ 新建分组</button>
+  </div>
+  <div id="groupList"></div>
+</section>
+
+<!-- 日历页 -->
+<section id="pCal" class="page">
+  <div class="card">
+    <div class="calHead">
+      <button id="calPrev" aria-label="上个月">‹</button>
+      <h2 id="calTitle"></h2>
+      <button id="calNext" aria-label="下个月">›</button>
+    </div>
+    <div class="row" style="justify-content:center;margin-top:6px"><button id="calToday">回到本月</button></div>
+    <div class="grid" id="calGrid"></div>
+    <div class="muted" style="margin-top:8px">红色＝新加坡公共假期；点一下日期＝设为静音日（🔕 当天所有闹钟不响也不弹窗），再点一下取消。</div>
+  </div>
+  <div class="card">
+    <h2>本月新加坡公共假期</h2>
+    <ul class="holList" id="holList"></ul>
+    <div class="muted" id="holSrc" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <h2>即将到来的静音日</h2>
+    <ul class="holList" id="muteList"></ul>
+  </div>
+</section>
+
+<!-- 音频库页 -->
+<section id="pLib" class="page">
+  <div class="card">
+    <label class="upload">上传铃声 / 语音<input type="file" id="fileIn" accept="audio/*,.mp3,.m4a,.wav,.aac,.caf" multiple></label>
+    <div class="muted" style="margin-top:8px">上传的音频只保存在本机（不上传到任何服务器），断网也能用。每个闹钟可选一个“铃声”和一个“语音”：先响一遍铃声，再把语音读两遍，然后自动结束。建议用 mp3 / m4a / wav 格式。</div>
+  </div>
+  <div class="card">
+    <h2>预置音频</h2>
+    <div class="muted">随应用一起下载并离线缓存，可选作铃声或语音。</div>
+    <div id="presetList"></div>
+  </div>
+  <div class="card">
+    <h2>我的音频</h2>
+    <div id="libList"></div>
+  </div>
+  <div class="card">
+    <h2>内置铃声（备用）</h2>
+    <div class="muted">音频库为空时也能保证至少 3 种铃声可选。</div>
+    <div id="builtinList"></div>
+  </div>
+</section>
+
+<details class="card" id="logDetails">
+  <summary>运行记录（排查用）</summary>
+  <div class="row" style="margin-top:8px">
+    <button id="logCopy">复制</button><button id="logClear" class="danger">清空</button>
+  </div>
+  <div id="logBox"></div>
+</details>
+
+<footer>
+  <div>新加坡闹钟 · 版本 <b id="verText"></b> · 缓存 <span id="cacheText"></span></div>
+  <div id="swText">离线缓存：检测中…</div>
+</footer>
+
+<!-- 编辑闹钟 -->
+<div class="mask" id="editMask">
+  <div class="sheet">
+    <div class="row"><h2 id="editTitle" class="spacer">新建闹钟</h2><button id="editCancel">取消</button><button class="primary" id="editSave">保存</button></div>
+    <label class="f">时间（新加坡时间）</label>
+    <input type="time" id="fTime" value="07:00">
+    <label class="f">重复</label>
+    <select id="fRepeat">
+      <option value="daily">每天</option>
+      <option value="weekday">工作日（周一至周五）</option>
+      <option value="weekend">周末（周六、周日）</option>
+      <option value="custom">自选星期</option>
+      <option value="once">仅一次</option>
+    </select>
+    <div class="days7" id="fDays" style="margin-top:8px"></div>
+    <label class="f">铃声</label>
+    <select id="fRing"></select>
+    <label class="f">语音（可选，铃声响完后读两遍）</label>
+    <select id="fVoice"></select>
+    <label class="f">备注</label>
+    <input type="text" id="fNote" maxlength="60" placeholder="例如：第一节课">
+    <label class="f">所属分组</label>
+    <select id="fGroup"></select>
+    <div class="row" style="margin-top:16px">
+      <button class="blue" id="editPreview">试听</button>
+      <span class="spacer"></span>
+      <button class="danger" id="editDelete">删除闹钟</button>
+    </div>
+  </div>
+</div>
+
+<!-- 响铃弹窗（没有“关闭”按钮） -->
+<div class="mask" id="ringMask">
+  <div class="ringBox">
+    <div class="muted" id="ringGroup"></div>
+    <div class="big" id="ringTime">--:--</div>
+    <div id="ringNote"></div>
+    <div id="ringStatus"></div>
+    <button class="primary" id="snoozeBtn">稍后提醒（1 分钟）</button>
+  </div>
+</div>
+
+<!-- 只响铃不弹窗时的顶部横条 -->
+<div id="banner"><span id="bannerText" class="spacer"></span><button class="primary" id="bannerSnooze">稍后提醒（1 分钟）</button></div>
+
+<script>
+'use strict';
+/* ========== 版本：每次改版同时修改这里和 sw.js 里的 VERSION ========== */
+const APP_VERSION = '1.1.1';
+const CACHE_NAME = 'sg-alarm-v' + APP_VERSION;
+
+const SGT = 8 * 3600000, DAY = 86400000, MISS_WINDOW = 30 * 60000, SNOOZE_MS = 60000;
+const WD = ['日','一','二','三','四','五','六'];
+const pad = n => String(n).padStart(2, '0');
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/* ---------- 新加坡时间工具（不依赖手机时区） ---------- */
+function sgt(ms){ const d = new Date(ms + SGT); return {y:d.getUTCFullYear(), m:d.getUTCMonth(), d:d.getUTCDate(), wd:d.getUTCDay(), h:d.getUTCHours(), mi:d.getUTCMinutes(), s:d.getUTCSeconds()}; }
+function sgtMs(y, m, d, h = 0, mi = 0){ return Date.UTC(y, m, d, h, mi) - SGT; }
+function dayKey(y, m, d){ const t = new Date(Date.UTC(y, m, d)); return t.getUTCFullYear() + '-' + pad(t.getUTCMonth() + 1) + '-' + pad(t.getUTCDate()); }
+function keyOfMs(ms){ const p = sgt(ms); return dayKey(p.y, p.m, p.d); }
+function fmtStamp(ms){ const p = sgt(ms); return `${pad(p.m+1)}-${pad(p.d)} ${pad(p.h)}:${pad(p.mi)}:${pad(p.s)}`; }
+function fmtWhen(ms){ const p = sgt(ms); return `${p.m+1}月${p.d}日（周${WD[p.wd]}）${pad(p.h)}:${pad(p.mi)}`; }
+
+/* ---------- 本地存储 ---------- */
+const store = {
+  get(k, d){ try { const v = localStorage.getItem('sga_' + k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem('sga_' + k, JSON.stringify(v)); } catch(e){ console.warn('保存失败', e); } }
+};
+let alarms  = store.get('alarms', []);
+let groups  = store.get('groups', []);
+let muted   = store.get('muted', {});
+let snoozes = store.get('snoozes', []);
+let fired   = store.get('fired', {});
+let logs    = store.get('logs', []);
+if (!groups.find(g => g.id === 'none')) groups.unshift({id:'none', name:'未分组', enabled:true, sound:true, vibrate:false, popup:true});
+function saveAlarms(){ store.set('alarms', alarms); }
+function saveGroups(){ store.set('groups', groups); }
+function saveMuted(){ store.set('muted', muted); }
+function saveSnoozes(){ store.set('snoozes', snoozes); }
+function saveFired(){ store.set('fired', fired); }
+const groupOf = id => groups.find(g => g.id === id) || groups.find(g => g.id === 'none');
+
+/* ---------- 运行记录 ---------- */
+function log(msg){
+  logs.unshift({t: Date.now(), m: msg});
+  if (logs.length > 300) logs.length = 300;
+  store.set('logs', logs);
+  renderLog();
+}
+function renderLog(){
+  const box = $('#logBox'); if (!box) return;
+  box.textContent = logs.map(l => fmtStamp(l.t) + '  ' + l.m).join('\n') || '（暂无记录）';
+}
+
+/* ---------- 新加坡公共假期 ---------- */
+// 2026、2027：新加坡人力部（MOM）公布的官方名单（含补假）
+const HOLIDAYS = {
+  2026: [['01-01','元旦'],['02-17','农历新年'],['02-18','农历新年（第二天）'],['03-21','开斋节'],
+         ['04-03','耶稣受难日'],['05-01','劳动节'],['05-27','哈芝节'],['05-31','卫塞节'],
+         ['06-01','卫塞节补假'],['08-09','国庆日'],['08-10','国庆日补假'],['11-08','屠妖节'],
+         ['11-09','屠妖节补假'],['12-25','圣诞节']],
+  2027: [['01-01','元旦'],['02-06','农历新年'],['02-07','农历新年（第二天）'],['02-08','农历新年补假'],
+         ['03-10','开斋节'],['03-26','耶稣受难日'],['05-01','劳动节'],['05-17','哈芝节'],
+         ['05-20','卫塞节'],['08-09','国庆日'],['10-28','屠妖节'],['12-25','圣诞节']]
+};
+// 其他年份：只标 4 个固定日期
+const FIXED = [['01-01','元旦'],['05-01','劳动节'],['08-09','国庆日'],['12-25','圣诞节']];
+function holidayMap(y){
+  const m = {};
+  (HOLIDAYS[y] || FIXED).forEach(([md, n]) => { m[y + '-' + md] = n; });
+  return m;
+}
+
+/* ---------- 内置铃声（离线合成，不需联网） ---------- */
+function wavURL(samples, rate){
+  const n = samples.length, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0,'RIFF'); v.setUint32(4, 36 + n*2, true); w(8,'WAVE'); w(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,rate,true); v.setUint32(28,rate*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+  w(36,'data'); v.setUint32(40, n*2, true);
+  for (let i = 0; i < n; i++){ const s = Math.max(-1, Math.min(1, samples[i])); v.setInt16(44 + i*2, s * 32767, true); }
+  return URL.createObjectURL(new Blob([buf], {type:'audio/wav'}));
+}
+function synth(notes, rate = 22050){
+  const total = notes.reduce((a, n) => a + n[1], 0);
+  const out = new Float32Array(Math.ceil(total * rate)); let pos = 0;
+  for (const [f, dur, dec] of notes){
+    const len = Math.floor(dur * rate);
+    if (f > 0) for (let i = 0; i < len; i++){
+      const t = i / rate, att = Math.min(1, i / (0.008 * rate)), rel = Math.min(1, (len - i) / (0.02 * rate));
+      const env = att * rel * (dec ? Math.exp(-t * dec) : 1);
+      out[pos + i] = 0.75 * env * (Math.sin(2*Math.PI*f*t) + 0.35*Math.sin(4*Math.PI*f*t)) / 1.35;
+    }
+    pos += len;
+  }
+  return wavURL(out, rate);
+}
+const beeps = []; for (let r = 0; r < 2; r++){ for (let i = 0; i < 4; i++) beeps.push([1046,.13],[0,.09]); beeps.push([0,.45]); }
+const BUILTIN = [
+  {id:'builtin:1', name:'内置·叮咚', notes:[[988,.55,3],[784,.9,2.4],[0,.35],[988,.55,3],[784,.9,2.4]]},
+  {id:'builtin:2', name:'内置·滴滴滴', notes:beeps},
+  {id:'builtin:3', name:'内置·上行琶音', notes:[[523,.2,1],[659,.2,1],[784,.2,1],[1047,.5,2],[0,.3],[523,.2,1],[659,.2,1],[784,.2,1],[1047,.7,2]]}
+];
+const builtinURL = {};
+function getBuiltinURL(id){ const b = BUILTIN.find(x => x.id === id) || BUILTIN[0]; if (!builtinURL[b.id]) builtinURL[b.id] = synth(b.notes); return builtinURL[b.id]; }
+const SILENT_URL = wavURL(new Float32Array(8000), 8000); // 1 秒静音，用于解锁与保活
+
+/* ---------- 音频库（IndexedDB，保存在本机） ---------- */
+const LIB = {db:null, items:[], urls:{}};
+function idb(){
+  return new Promise((res, rej) => {
+    if (LIB.db) return res(LIB.db);
+    const r = indexedDB.open('sg-alarm-audio', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('audio', {keyPath:'id'});
+    r.onsuccess = () => { LIB.db = r.result; res(LIB.db); };
+    r.onerror = () => rej(r.error);
+  });
+}
+function idbReq(mode, fn){
+  return idb().then(db => new Promise((res, rej) => {
+    const t = db.transaction('audio', mode); const req = fn(t.objectStore('audio'));
+    t.oncomplete = () => res(req ? req.result : undefined); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+  }));
+}
+async function loadLibrary(){
+  try {
+    const recs = await idbReq('readonly', s => s.getAll());
+    LIB.items = recs.map(r => ({id:r.id, name:r.name, size:r.size, mime:r.mime, added:r.added})).sort((a,b) => a.added - b.added);
+    recs.forEach(r => { LIB.urls[r.id] = URL.createObjectURL(new Blob([r.data], {type: r.mime})); });
+  } catch(e){ log('音频库读取失败：' + e.message); }
+}
+async function addFiles(files){
+  for (const f of files){
+    if (f.size > 20e6){ alert(`“${f.name}”太大（超过 20MB），请换个短一点的音频。`); continue; }
+    try {
+      const data = await f.arrayBuffer();
+      const rec = {id:'lib:' + uid(), name:f.name.replace(/\.[^.]+$/, '') || '未命名', mime:f.type || 'audio/mpeg', size:f.size, added:Date.now(), data};
+      await idbReq('readwrite', s => s.put(rec));
+      LIB.items.push({id:rec.id, name:rec.name, size:rec.size, mime:rec.mime, added:rec.added});
+      LIB.urls[rec.id] = URL.createObjectURL(new Blob([data], {type: rec.mime}));
+      log('音频库：已添加“' + rec.name + '”（' + (f.size/1024).toFixed(0) + 'KB）');
+    } catch(e){ log('添加音频失败：' + e.message); alert('添加失败：' + e.message); }
+  }
+  renderLib(); renderAlarms();
+}
+async function deleteLib(id){
+  const it = LIB.items.find(x => x.id === id); if (!it) return;
+  const used = alarms.filter(a => a.ring === id || a.voice === id).length;
+  if (!confirm(`删除“${it.name}”？` + (used ? `\n有 ${used} 个闹钟在用它，删除后铃声改回“内置·叮咚”，语音改为“无”。` : ''))) return;
+  try { await idbReq('readwrite', s => s.delete(id)); } catch(e){ log('删除失败：' + e.message); return; }
+  LIB.items = LIB.items.filter(x => x.id !== id);
+  if (LIB.urls[id]) URL.revokeObjectURL(LIB.urls[id]); delete LIB.urls[id];
+  alarms.forEach(a => { if (a.ring === id) a.ring = 'builtin:1'; if (a.voice === id) a.voice = ''; });
+  saveAlarms(); log('音频库：已删除“' + it.name + '”'); renderLib(); renderAlarms();
+}
+/* ---------- 预置音频（放在 audio/ 文件夹，由离线缓存脚本缓存） ---------- */
+const PRESETS = [
+  {id:'preset:01', name:'01_Time_to_go_carpark.mp3', file:'01_Time_to_go_carpark.mp3'},
+  {id:'preset:02', name:'02_Math_lesson.mp3', file:'02_Math_lesson.mp3'},
+  {id:'preset:03', name:'03_Gym_lesson.mp3', file:'03_Gym_lesson.mp3'},
+  {id:'preset:04', name:'04_Seraphina_to_Jing_Ting_grandfather.mp3', file:'04_Seraphina_to_Jing_Ting_grandfather.mp3'},
+  {id:'preset:05', name:'05_Robotic_lesson.mp3', file:'05_Robotic_lesson.mp3'},
+  {id:'preset:06', name:'06_Remember_the_milk.mp3', file:'06_Remember_the_milk.mp3'},
+  {id:'preset:07', name:'07_Transport_go_toilet.mp3', file:'07_Transport_go_toilet.mp3'},
+  {id:'preset:08', name:'08_Transport_go_to_lobby.mp3', file:'08_Transport_go_to_lobby.mp3'},
+  {id:'preset:09', name:'09_Fetch_the_gym_student.mp3', file:'09_Fetch_the_gym_student.mp3'}
+];
+const presetURL = {};
+// 预先把文件读成本地 Blob 地址：播放时不再走网络/缓存，切换下一段可以立即开始
+async function loadPresets(){
+  let ok = 0;
+  await Promise.all(PRESETS.map(async p => {
+    try {
+      const r = await fetch('audio/' + p.file);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      presetURL[p.id] = URL.createObjectURL(await r.blob()); ok++;
+    } catch(e){ log(`预置音频“${p.name}”加载失败：${e.message}`); }
+  }));
+  log(`预置音频已加载 ${ok}/${PRESETS.length} 个`);
+}
+function audioURL(id){
+  if (id && id.startsWith('lib:') && LIB.urls[id]) return LIB.urls[id];
+  if (id && id.startsWith('preset:')){
+    if (presetURL[id]) return presetURL[id];
+    const p = PRESETS.find(x => x.id === id); if (p) return 'audio/' + p.file;
+  }
+  return getBuiltinURL(id);
+}
+function audioName(id){
+  if (!id) return '无';
+  const pr = PRESETS.find(x => x.id === id); if (pr) return pr.name;
+  const b = BUILTIN.find(x => x.id === id); if (b) return b.name;
+  const l = LIB.items.find(x => x.id === id); return l ? l.name : '（已删除）';
+}
+
+/* ---------- 播放器：靠“播放结束”事件串联，不用定时器 ---------- */
+const player = new Audio(); player.preload = 'auto'; player.setAttribute('playsinline', '');
+const keepAlive = new Audio(); keepAlive.loop = true; keepAlive.setAttribute('playsinline', '');
+let audioEnabled = false, playToken = 0, playCleanup = null, previewing = false;
+function pauseKeep(){ if (audioEnabled) keepAlive.pause(); }
+function resumeKeep(){ if (audioEnabled && keepAlive.paused) keepAlive.play().catch(e => log('静音保活音频无法恢复：' + e.name)); }
+function playList(urls, onStep, onDone){
+  stopPlayback(false);
+  const token = ++playToken; let i = 0, step = 0;
+  const finish = ok => { if (token !== playToken) return; cleanup(); onDone && onDone(ok); };
+  const advance = s => { if (token !== playToken || s !== step) return; i++; go(); };
+  const go = () => {
+    if (token !== playToken) return;
+    if (i >= urls.length){ finish(true); return; }
+    const my = ++step;
+    onStep && onStep(i);
+    player.src = urls[i];
+    const p = player.play();
+    if (p && p.catch) p.catch(e => {
+      if (token !== playToken || my !== step) return;
+      if (e.name === 'NotAllowedError'){ log('播放被系统拦截（请先点「启用闹钟」）'); finish(false); }
+      else { log('音频无法播放（' + e.name + '），跳过这一段'); advance(my); }
+    });
+  };
+  const onEnded = () => advance(step);
+  const onErr = () => { log('音频文件出错（格式可能不受支持），跳过这一段'); advance(step); };
+  function cleanup(){ player.removeEventListener('ended', onEnded); player.removeEventListener('error', onErr); playCleanup = null; }
+  player.addEventListener('ended', onEnded); player.addEventListener('error', onErr);
+  playCleanup = cleanup; pauseKeep(); go();
+}
+function stopPlayback(resume = true){
+  playToken++; if (playCleanup) playCleanup();
+  try { player.pause(); } catch(e){}
+  if (resume) resumeKeep();
+}
+function sequenceFor(a){ const u = [audioURL(a.ring)]; if (a.voice){ const v = audioURL(a.voice); u.push(v, v); } return u; }
+const STEP_TEXT = ['正在响铃声…', '正在读语音（第 1 遍）…', '正在读语音（第 2 遍）…'];
+
+/* ---------- 启用闹钟（解锁声音 + 静音保活 + 屏幕常亮） ---------- */
+let wakeLock = null;
+async function requestWake(){
+  if (!('wakeLock' in navigator)){ log('此浏览器不支持“屏幕常亮”'); return; }
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    log('已申请屏幕常亮');
+    wakeLock.addEventListener('release', () => { log('屏幕常亮已被系统释放'); wakeLock = null; });
+  } catch(e){ log('屏幕常亮申请失败：' + e.name); }
+}
+function enableAlarms(){
+  // 两个 play() 必须在点按的同一瞬间同步调用，iOS 才会放行
+  player.src = SILENT_URL; keepAlive.src = SILENT_URL;
+  const p1 = player.play(), p2 = keepAlive.play();
+  Promise.allSettled([p1, p2]).then(r => {
+    if (r[0].status === 'fulfilled'){ player.pause(); audioEnabled = true; log('已启用闹钟：声音已解锁'); }
+    else log('声音解锁失败：' + (r[0].reason && r[0].reason.name));
+    if (r[1].status === 'fulfilled') log('静音保活音频已开始循环');
+    else log('静音保活启动失败：' + (r[1].reason && r[1].reason.name));
+    renderEnable();
+  });
+  requestWake();
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(ok => log(ok ? '已申请持久存储：成功' : '已申请持久存储：系统未批准'));
+}
+function renderEnable(){
+  const b = $('#enableBtn');
+  if (audioEnabled){ b.textContent = '✓ 闹钟已启用（保活中）'; b.classList.add('on'); }
+  else { b.textContent = '启用闹钟'; b.classList.remove('on'); }
+}
+
+/* ---------- 闹钟计算 ---------- */
+function repeatDays(a){
+  switch (a.repeat.type){
+    case 'weekday': return [1,2,3,4,5];
+    case 'weekend': return [0,6];
+    case 'custom':  return a.repeat.days || [];
+    default:        return [0,1,2,3,4,5,6];
+  }
+}
+function repeatText(a){
+  switch (a.repeat.type){
+    case 'daily': return '每天';
+    case 'weekday': return '工作日';
+    case 'weekend': return '周末';
+    case 'once': return '仅一次';
+    case 'custom': { const d = (a.repeat.days || []).slice().sort((x,y) => ((x+6)%7) - ((y+6)%7)); return d.length ? '每周' + d.map(x => WD[x]).join('、') : '未选星期'; }
+  }
+  return '';
+}
+// 在 (from, to] 区间内该闹钟的所有响铃时刻
+function occurrencesBetween(a, from, to){
+  const res = [], [h, mi] = a.time.split(':').map(Number), days = repeatDays(a), s = sgt(from);
+  const span = Math.ceil((to - from) / DAY) + 1;
+  for (let i = 0; i <= span; i++){
+    const occ = sgtMs(s.y, s.m, s.d + i, h, mi);
+    if (occ <= from) continue; if (occ > to) break;
+    if (!days.includes(new Date(Date.UTC(s.y, s.m, s.d + i)).getUTCDay())) continue;
+    if (a.repeat.type === 'once' && occ <= (a.onceAfter || 0)) continue;
+    res.push(occ);
+  }
+  return res;
+}
+function nextOccurrence(a, now){
+  const [h, mi] = a.time.split(':').map(Number), days = repeatDays(a), s = sgt(now);
+  if (!days.length) return null;
+  for (let i = 0; i < 400; i++){
+    const occ = sgtMs(s.y, s.m, s.d + i, h, mi);
+    if (occ <= now) continue;
+    if (!days.includes(new Date(Date.UTC(s.y, s.m, s.d + i)).getUTCDay())) continue;
+    if (a.repeat.type === 'once' && occ <= (a.onceAfter || 0)) continue;
+    if (muted[keyOfMs(occ)]) continue; // 跳过静音日
+    return occ;
+  }
+  return null;
+}
+function nextAlarm(now){
+  let best = null;
+  for (const a of alarms){
+    if (!a.enabled || !groupOf(a.groupId).enabled) continue;
+    const o = nextOccurrence(a, now);
+    if (o && (!best || o < best.at)) best = {at:o, alarm:a};
+  }
+  for (const s of snoozes){
+    const a = alarms.find(x => x.id === s.alarmId);
+    if (!a || !groupOf(a.groupId).enabled || s.at <= now || muted[keyOfMs(s.at)]) continue;
+    if (!best || s.at < best.at) best = {at:s.at, alarm:a, snooze:true};
+  }
+  return best;
+}
+
+/* ---------- 检查与触发（含切回页面补响 30 分钟内错过的闹钟） ---------- */
+let ringQueue = [], ringing = null, ringTimer = null;
+function checkAlarms(reason){
+  const now = Date.now();
+  let last = store.get('lastCheck', 0);
+  if (!last || last > now + 60000){ store.set('lastCheck', now); return; }
+  if (last > now) last = now;
+  if (now - last > MISS_WINDOW){
+    const from = Math.max(last, now - 2 * DAY), to = now - MISS_WINDOW;
+    for (const a of alarms){
+      if (!a.enabled || !groupOf(a.groupId).enabled) continue;
+      for (const occ of occurrencesBetween(a, from, to))
+        if (!muted[keyOfMs(occ)]) log(`错过闹钟 ${fmtWhen(occ)} ${a.note || ''}：超过半小时，不再补响`);
+    }
+  }
+  const from = Math.max(last, now - MISS_WINDOW), due = [];
+  for (const a of alarms){
+    if (!a.enabled || !groupOf(a.groupId).enabled) continue;
+    for (const occ of occurrencesBetween(a, from, now)) due.push({alarm:a, occ, key:a.id + '@' + occ});
+  }
+  const before = snoozes.length;
+  snoozes = snoozes.filter(s => {
+    if (s.at > now) return true;
+    const a = alarms.find(x => x.id === s.alarmId);
+    if (!a) return false;
+    if (now - s.at > MISS_WINDOW){ log('稍后提醒已过去超过半小时，不再补响'); return false; }
+    if (!groupOf(a.groupId).enabled) return false;
+    due.push({alarm:a, occ:s.at, key:'snz:' + s.id, snooze:true});
+    return false;
+  });
+  if (snoozes.length !== before) saveSnoozes();
+  store.set('lastCheck', now);
+  if (!due.length) return;
+  due.sort((x, y) => x.occ - y.occ);
+  let changed = false;
+  for (const d of due){
+    if (fired[d.key]) continue;
+    fired[d.key] = now; changed = true;
+    if (muted[keyOfMs(d.occ)]){ log(`静音日，跳过：${fmtWhen(d.occ)} ${d.alarm.note || ''}`); continue; }
+    d.late = now - d.occ > 90000;
+    if (d.late) log(`补响（${reason}）：${fmtWhen(d.occ)} 的闹钟迟了 ${Math.round((now - d.occ)/60000)} 分钟`);
+    ringQueue.push(d);
+  }
+  if (changed){
+    for (const k in fired) if (now - fired[k] > 3 * DAY) delete fired[k];
+    saveFired();
+  }
+  if (!ringing) nextRing();
+}
+function nextRing(){
+  const it = ringQueue.shift();
+  if (!it){ ringing = null; return; }
+  ringing = it; startRing(it);
+}
+function startRing(it){
+  const a = it.alarm, g = groupOf(a.groupId);
+  const modes = [g.sound && '响铃与语音', g.vibrate && '震动', g.popup && '弹窗'].filter(Boolean).join(' + ') || '完全静音';
+  log(`闹钟触发：${a.time} ${a.note || ''}［${g.name}｜${modes}］${it.snooze ? '（稍后提醒）' : ''}`);
+  if (previewing) stopPreview();
+  if (a.repeat.type === 'once' && !it.snooze){ a.enabled = false; saveAlarms(); renderAlarms(); }
+  if (g.vibrate){
+    if (navigator.vibrate) navigator.vibrate([600,300,600,300,600]);
+    else log('本设备不支持震动（iPhone Safari 不支持，仅安卓有效）');
+  }
+  const label = `⏰ ${a.time}${a.note ? ' ' + a.note : ''}`;
+  showTip(`${g.sound ? '⏰' : '🔕'} ${fmtWhen(it.occ)} ${a.note || ''}［${g.name}］${g.sound || g.popup ? '' : '（静音提醒）'}`);
+  if (!g.sound && !g.popup){ finishRing(); return; }  // 完全静音：只显示一行小提示
+  document.title = label;
+  if (g.popup){
+    $('#ringGroup').textContent = g.name + (it.late ? '　· 补响' : '') + (it.snooze ? '　· 稍后提醒' : '');
+    $('#ringTime').textContent = a.time;
+    $('#ringNote').textContent = a.note || '闹钟';
+    $('#ringMask').classList.add('show');
+  } else {
+    $('#bannerText').textContent = label;
+    $('#banner').classList.add('show');
+  }
+  if (g.sound){
+    playList(sequenceFor(a), i => {
+      $('#ringStatus').textContent = STEP_TEXT[i] || '';
+      if (i === 2) log('语音第 2 遍开始（由第 1 遍“播放结束”事件直接触发）');
+    }, ok => {
+      if (ok){ log('播放完毕，自动结束'); finishRing(); }
+      else if (g.popup){ $('#ringStatus').textContent = '声音被系统拦截（未点「启用闹钟」），30 秒后自动收起'; ringTimer = setTimeout(finishRing, 30000); }
+      else finishRing();
+    });
+  } else {
+    $('#ringStatus').textContent = '静音提醒，30 秒后自动收起';
+    ringTimer = setTimeout(finishRing, 30000);
+  }
+}
+function finishRing(){
+  clearTimeout(ringTimer); ringTimer = null;
+  stopPlayback(true);
+  $('#ringMask').classList.remove('show'); $('#banner').classList.remove('show');
+  document.title = '新加坡闹钟';
+  ringing = null; renderNext(); nextRing();
+}
+function snooze(){
+  if (!ringing) return;
+  const a = ringing.alarm;
+  snoozes.push({id:uid(), alarmId:a.id, at:Date.now() + SNOOZE_MS}); saveSnoozes();
+  log(`稍后提醒：${a.time} ${a.note || ''} 将在 1 分钟后再响`);
+  finishRing();
+}
+function showTip(t){ $('#tipLine').textContent = '最近提醒：' + t; }
+
+/* ---------- 试听 ---------- */
+let previewBtn = null;
+function startPreview(urls, btn){
+  if (ringing){ alert('闹钟正在响，稍后再试听'); return; }
+  if (previewing){ stopPreview(); return; }
+  previewing = true; previewBtn = btn; if (btn) btn.textContent = '停止试听';
+  playList(urls, null, ok => { if (!ok) alert('播放被拦截：请先点上方「启用闹钟」再试听。'); stopPreview(); });
+}
+function stopPreview(){
+  previewing = false; stopPlayback(true);
+  if (previewBtn) previewBtn.textContent = '试听'; previewBtn = null;
+}
+
+/* ---------- 界面：时钟与下一个闹钟 ---------- */
+let lastTick = Date.now();
+function renderClock(){
+  const now = Date.now(), p = sgt(now), key = dayKey(p.y, p.m, p.d);
+  $('#clock').textContent = `${pad(p.h)}:${pad(p.mi)}:${pad(p.s)}`;
+  const hol = holidayMap(p.y)[key];
+  $('#dateLine').innerHTML = `${p.y}年${p.m+1}月${p.d}日 星期${WD[p.wd]}` +
+    (hol ? `　<span id="todayTag">${esc(hol)}</span>` : '') + (muted[key] ? '　🔕 今天是静音日' : '');
+}
+function renderNext(){
+  const now = Date.now(), n = nextAlarm(now);
+  if (!n){ $('#nextLine').textContent = '下一个闹钟：无'; return; }
+  let s = Math.max(0, Math.floor((n.at - now) / 1000));
+  const d = Math.floor(s / 86400); s %= 86400; const h = Math.floor(s / 3600); s %= 3600; const m = Math.floor(s / 60); s %= 60;
+  const left = (d ? d + ' 天 ' : '') + (d || h ? h + ' 小时 ' : '') + m + ' 分 ' + (d ? '' : s + ' 秒');
+  $('#nextLine').textContent = `下一个闹钟：${fmtWhen(n.at)}${n.alarm.note ? ' ' + n.alarm.note : ''}${n.snooze ? '（稍后提醒）' : ''}　还有 ${left}`;
+}
+function tick(){
+  const now = Date.now();
+  if (now - lastTick > 5000) log(`页面暂停了约 ${Math.round((now - lastTick)/1000)} 秒（可能在后台或被系统冻结）`);
+  lastTick = now;
+  renderClock(); renderNext(); checkAlarms('定时检查');
+}
+
+/* ---------- 界面：分组与闹钟 ---------- */
+function modeDesc(g){
+  if (!g.sound && !g.popup && !g.vibrate) return '完全静音：只在顶部显示一行小提示';
+  const parts = [];
+  parts.push(g.sound ? '响铃与语音' : '静音');
+  if (g.vibrate) parts.push('震动');
+  if (g.popup) parts.push('弹窗');
+  let s = '当前：' + parts.join(' + ');
+  if (!g.sound && !g.popup) s += '（iPhone 上等于只显示一行小提示）';
+  return s;
+}
+function renderAlarms(){
+  const box = $('#groupList'); box.innerHTML = '';
+  for (const g of groups){
+    const list = alarms.filter(a => groupOf(a.groupId).id === g.id).sort((x, y) => x.time.localeCompare(y.time));
+    const card = document.createElement('div'); card.className = 'card';
+    card.innerHTML = `
+      <div class="gHead">
+        <div class="gName">${esc(g.name)} <span class="muted">（${list.length}）</span></div>
+        ${g.id !== 'none' ? `<button data-act="rename">改名</button><button class="danger" data-act="delg">删除</button>` : ''}
+        <label class="sw" title="分组总开关"><input type="checkbox" data-act="genable" ${g.enabled ? 'checked' : ''}><span></span></label>
+      </div>
+      <div class="modes">
+        <label><input type="checkbox" data-mode="sound" ${g.sound ? 'checked' : ''}>响铃与语音</label>
+        <label><input type="checkbox" data-mode="vibrate" ${g.vibrate ? 'checked' : ''}>震动（仅安卓有效）</label>
+        <label><input type="checkbox" data-mode="popup" ${g.popup ? 'checked' : ''}>屏幕弹窗</label>
+      </div>
+      <div class="gDesc">${g.enabled ? esc(modeDesc(g)) : '分组总开关已关：本组闹钟都不会响'}</div>`;
+    card.querySelector('[data-act="genable"]').onchange = e => { g.enabled = e.target.checked; saveGroups(); log(`分组“${g.name}”总开关：${g.enabled ? '开' : '关'}`); renderAlarms(); renderNext(); };
+    card.querySelectorAll('[data-mode]').forEach(cb => cb.onchange = () => { g[cb.dataset.mode] = cb.checked; saveGroups(); log(`分组“${g.name}”提醒方式：${modeDesc(g)}`); renderAlarms(); });
+    const rn = card.querySelector('[data-act="rename"]');
+    if (rn) rn.onclick = () => { const n = prompt('分组新名称', g.name); if (n && n.trim()){ g.name = n.trim().slice(0, 20); saveGroups(); renderAlarms(); } };
+    const dg = card.querySelector('[data-act="delg"]');
+    if (dg) dg.onclick = () => {
+      if (!confirm(`删除分组“${g.name}”？\n里面的 ${list.length} 个闹钟会回到“未分组”。`)) return;
+      alarms.forEach(a => { if (a.groupId === g.id) a.groupId = 'none'; });
+      groups = groups.filter(x => x.id !== g.id); saveGroups(); saveAlarms();
+      log(`已删除分组“${g.name}”，闹钟移回未分组`); renderAlarms(); renderNext();
+    };
+    if (!list.length){ const e = document.createElement('div'); e.className = 'empty'; e.textContent = '这个分组还没有闹钟'; card.appendChild(e); }
+    for (const a of list){
+      const row = document.createElement('div'); row.className = 'alarm' + (a.enabled && g.enabled ? '' : ' off');
+      row.innerHTML = `<div class="t">${esc(a.time)}</div>
+        <div class="info"><div>${esc(repeatText(a))}${a.note ? '　' + esc(a.note) : ''}</div>
+        <div class="muted">铃声：${esc(audioName(a.ring))}　语音：${esc(audioName(a.voice))}</div></div>
+        <label class="sw"><input type="checkbox" ${a.enabled ? 'checked' : ''}><span></span></label>`;
+      row.querySelector('input').onchange = e => {
+        a.enabled = e.target.checked; if (a.enabled && a.repeat.type === 'once') a.onceAfter = Date.now();
+        saveAlarms(); renderAlarms(); renderNext();
+      };
+      row.querySelector('.sw').onclick = e => e.stopPropagation();
+      row.onclick = () => openEditor(a);
+      card.appendChild(row);
+    }
+    box.appendChild(card);
+  }
+}
+
+/* ---------- 编辑闹钟 ---------- */
+let editing = null;
+function fillSelect(sel, opts, val){ sel.innerHTML = opts.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join(''); sel.value = val; if (sel.value !== val && opts.length) sel.value = opts[0][0]; }
+function renderDays(days){
+  const box = $('#fDays'); box.innerHTML = '';
+  [1,2,3,4,5,6,0].forEach(d => {
+    const l = document.createElement('label'); const on = days.includes(d);
+    l.className = on ? 'on' : ''; l.innerHTML = `<input type="checkbox" value="${d}" ${on ? 'checked' : ''}>${WD[d]}`;
+    l.querySelector('input').onchange = e => l.classList.toggle('on', e.target.checked);
+    box.appendChild(l);
+  });
+}
+function openEditor(a){
+  editing = a || null;
+  const v = a || {time:'07:00', repeat:{type:'weekday', days:[1,2,3,4,5]}, ring:'builtin:1', voice:'', note:'', groupId:'none'};
+  $('#editTitle').textContent = a ? '编辑闹钟' : '新建闹钟';
+  $('#fTime').value = v.time; $('#fRepeat').value = v.repeat.type; $('#fNote').value = v.note || '';
+  renderDays(v.repeat.type === 'custom' ? (v.repeat.days || []) : repeatDays(v));
+  $('#fDays').style.display = v.repeat.type === 'custom' ? 'flex' : 'none';
+  const lib = [...PRESETS.map(p => [p.id, p.name]), ...LIB.items.map(x => [x.id, x.name])];
+  fillSelect($('#fRing'), [...lib, ...BUILTIN.map(b => [b.id, b.name])], v.ring);
+  fillSelect($('#fVoice'), [['', '无'], ...lib], v.voice || '');
+  fillSelect($('#fGroup'), groups.map(g => [g.id, g.name]), v.groupId);
+  $('#editDelete').style.display = a ? '' : 'none';
+  $('#editMask').classList.add('show');
+}
+function closeEditor(){ if (previewing) stopPreview(); $('#editMask').classList.remove('show'); editing = null; }
+function readEditor(){
+  const type = $('#fRepeat').value;
+  const days = [...$('#fDays').querySelectorAll('input:checked')].map(x => +x.value);
+  return {time:$('#fTime').value || '07:00', repeat:{type, days: type === 'custom' ? days : []},
+    ring:$('#fRing').value, voice:$('#fVoice').value, note:$('#fNote').value.trim(), groupId:$('#fGroup').value};
+}
+function saveEditor(){
+  const v = readEditor();
+  if (v.repeat.type === 'custom' && !v.repeat.days.length){ alert('请至少选一个星期'); return; }
+  if (editing){ Object.assign(editing, v); if (v.repeat.type === 'once') editing.onceAfter = Date.now(); log(`已修改闹钟 ${v.time} ${v.note}`); }
+  else { alarms.push(Object.assign({id:uid(), enabled:true, onceAfter:Date.now()}, v)); log(`已新建闹钟 ${v.time}（${repeatText(v)}）${v.note}`); }
+  saveAlarms(); closeEditor(); renderAlarms(); renderNext();
+}
+
+/* ---------- 界面：万年历 ---------- */
+let calY, calM;
+function renderCal(){
+  const now = sgt(Date.now()), todayKey = dayKey(now.y, now.m, now.d);
+  const hm = holidayMap(calY);
+  $('#calTitle').textContent = `${calY}年${calM + 1}月`;
+  const grid = $('#calGrid'); grid.innerHTML = '';
+  WD.forEach((w, i) => { const e = document.createElement('div'); e.className = 'wh' + (i === 0 || i === 6 ? ' we' : ''); e.textContent = w; grid.appendChild(e); });
+  const first = new Date(Date.UTC(calY, calM, 1)).getUTCDay(), dim = new Date(Date.UTC(calY, calM + 1, 0)).getUTCDate();
+  for (let i = 0; i < first; i++){ const e = document.createElement('div'); e.className = 'day blank'; grid.appendChild(e); }
+  for (let d = 1; d <= dim; d++){
+    const key = dayKey(calY, calM, d), hol = hm[key];
+    const b = document.createElement('button');
+    b.className = 'day' + (hol ? ' hol' : '') + (key === todayKey ? ' today' : '') + (muted[key] ? ' mute' : '');
+    b.innerHTML = `<span class="n">${d}</span>${hol ? `<span class="hn">${esc(hol)}</span>` : ''}${muted[key] ? '<span class="mi">🔕</span>' : ''}`;
+    b.onclick = () => {
+      if (muted[key]){ delete muted[key]; log(`取消静音日：${key}`); }
+      else { muted[key] = true; log(`设为静音日：${key}（全天不响、不弹窗）`); }
+      saveMuted(); renderCal(); renderNext(); renderClock();
+    };
+    grid.appendChild(b);
+  }
+  const prefix = `${calY}-${pad(calM + 1)}-`;
+  const items = Object.keys(hm).filter(k => k.startsWith(prefix)).sort();
+  $('#holList').innerHTML = items.length
+    ? items.map(k => { const dd = +k.slice(8), w = WD[new Date(Date.UTC(calY, calM, dd)).getUTCDay()]; return `<li><span class="d">${calM + 1}月${dd}日 周${w}</span><span>${esc(hm[k])}</span></li>`; }).join('')
+    : '<li class="muted">本月没有新加坡公共假期</li>';
+  $('#holSrc').textContent = HOLIDAYS[calY]
+    ? `${calY} 年依据新加坡人力部（MOM）官方名单，含补假。开斋节、哈芝节日期以宗教当局最终确认为准。`
+    : `${calY} 年没有内置官方名单，只标出元旦、劳动节、国庆日、圣诞节 4 个固定日期（不含补假）。`;
+  const upcoming = Object.keys(muted).filter(k => k >= todayKey).sort();
+  $('#muteList').innerHTML = upcoming.length
+    ? upcoming.slice(0, 30).map(k => `<li><span class="d" style="color:inherit">${k}</span><button data-k="${k}" class="danger">取消</button></li>`).join('')
+    : '<li class="muted">没有设置静音日</li>';
+  $('#muteList').querySelectorAll('button').forEach(b => b.onclick = () => { delete muted[b.dataset.k]; saveMuted(); log(`取消静音日：${b.dataset.k}`); renderCal(); renderNext(); renderClock(); });
+}
+
+/* ---------- 界面：音频库 ---------- */
+function renderLib(){
+  const box = $('#libList');
+  box.innerHTML = LIB.items.length ? '' : '<div class="empty">还没有上传音频。点上方蓝色按钮，从“文件”App 里选择铃声或语音。</div>';
+  for (const it of LIB.items){
+    const row = document.createElement('div'); row.className = 'libItem';
+    row.innerHTML = `<div class="nm">${esc(it.name)} <span class="muted">${(it.size/1024).toFixed(0)}KB</span></div><button>试听</button><button class="danger">删除</button>`;
+    const [pb, db] = row.querySelectorAll('button');
+    pb.onclick = () => startPreview([audioURL(it.id)], pb);
+    db.onclick = () => deleteLib(it.id);
+    box.appendChild(row);
+  }
+  const pl = $('#presetList'); pl.innerHTML = '';
+  for (const p of PRESETS){
+    const row = document.createElement('div'); row.className = 'libItem';
+    row.innerHTML = `<div class="nm">${esc(p.name)}</div><button>试听</button>`;
+    const pb = row.querySelector('button'); pb.onclick = () => startPreview([audioURL(p.id)], pb);
+    pl.appendChild(row);
+  }
+  const bb = $('#builtinList'); bb.innerHTML = '';
+  for (const b of BUILTIN){
+    const row = document.createElement('div'); row.className = 'libItem';
+    row.innerHTML = `<div class="nm">${esc(b.name)}</div><button>试听</button>`;
+    const pb = row.querySelector('button'); pb.onclick = () => startPreview([getBuiltinURL(b.id)], pb);
+    bb.appendChild(row);
+  }
+}
+
+/* ---------- 事件绑定 ---------- */
+$('#enableBtn').onclick = enableAlarms;
+$('#snoozeBtn').onclick = snooze;
+$('#bannerSnooze').onclick = snooze;
+$('#addAlarmBtn').onclick = () => openEditor(null);
+$('#addGroupBtn').onclick = () => {
+  const n = prompt('新分组名称（例如：上课）'); if (!n || !n.trim()) return;
+  groups.push({id:'g' + uid(), name:n.trim().slice(0, 20), enabled:true, sound:true, vibrate:false, popup:true});
+  saveGroups(); log(`已新建分组“${n.trim()}”`); renderAlarms();
+};
+$('#editCancel').onclick = closeEditor;
+$('#editSave').onclick = saveEditor;
+$('#editDelete').onclick = () => {
+  if (!editing || !confirm('删除这个闹钟？')) return;
+  const id = editing.id; alarms = alarms.filter(a => a.id !== id); snoozes = snoozes.filter(s => s.alarmId !== id);
+  saveAlarms(); saveSnoozes(); log('已删除一个闹钟'); closeEditor(); renderAlarms(); renderNext();
+};
+$('#editPreview').onclick = e => { const v = readEditor(); startPreview(sequenceFor(v), e.currentTarget); };
+$('#fRepeat').onchange = e => {
+  const t = e.target.value; $('#fDays').style.display = t === 'custom' ? 'flex' : 'none';
+};
+$('#fileIn').onchange = e => { const f = [...e.target.files]; e.target.value = ''; if (f.length) addFiles(f); };
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('act', x === b));
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('act', p.id === b.dataset.tab));
+});
+$('#calPrev').onclick = () => { calM--; if (calM < 0){ calM = 11; calY--; } renderCal(); };
+$('#calNext').onclick = () => { calM++; if (calM > 11){ calM = 0; calY++; } renderCal(); };
+$('#calToday').onclick = () => { const p = sgt(Date.now()); calY = p.y; calM = p.m; renderCal(); };
+$('#logClear').onclick = () => { if (confirm('清空运行记录？')){ logs = []; store.set('logs', logs); renderLog(); } };
+$('#logCopy').onclick = () => {
+  const t = $('#logBox').textContent;
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => alert('已复制'), () => alert('复制失败，请长按记录手动选择'));
+};
+
+/* ---------- 生命周期事件（写入运行记录） ---------- */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden'){ log('页面进入后台'); store.set('lastCheck', Date.now()); }
+  else {
+    log('页面回到前台');
+    lastTick = Date.now(); renderClock();
+    checkAlarms('切回页面');
+    if (audioEnabled){ resumeKeep(); if (!wakeLock) requestWake(); }
+  }
+});
+document.addEventListener('freeze', () => log('页面被系统冻结（freeze）'));
+document.addEventListener('resume', () => { log('页面从冻结中恢复（resume）'); checkAlarms('从冻结恢复'); });
+window.addEventListener('pagehide', e => log('页面隐藏/卸载（pagehide' + (e.persisted ? '，进入缓存' : '') + '）'));
+window.addEventListener('pageshow', e => { if (e.persisted){ log('页面从缓存恢复（pageshow）'); checkAlarms('页面恢复'); } });
+window.addEventListener('online', () => log('网络已连接'));
+window.addEventListener('offline', () => log('网络已断开（不影响走时和响铃）'));
+keepAlive.addEventListener('pause', () => { if (audioEnabled && !playCleanup && !document.hidden) log('静音保活音频被暂停'); });
+
+/* ---------- 离线缓存（Service Worker） ---------- */
+$('#verText').textContent = 'v' + APP_VERSION;
+$('#cacheText').textContent = CACHE_NAME;
+if ('serviceWorker' in navigator && location.protocol !== 'file:'){
+  navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then(reg => {
+    $('#swText').textContent = '离线缓存：已启用';
+    reg.addEventListener('updatefound', () => log('发现新版本，正在后台更新缓存'));
+  }).catch(e => { $('#swText').textContent = '离线缓存：注册失败'; log('离线缓存注册失败：' + e.message); });
+  navigator.serviceWorker.addEventListener('controllerchange', () => log('离线缓存脚本已更新'));
+} else $('#swText').textContent = '离线缓存：当前环境不支持（需通过 https 打开）';
+
+/* ---------- 启动 ---------- */
+(async function init(){
+  const standalone = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  log(`页面启动 v${APP_VERSION}（${standalone ? '主屏幕应用模式' : '浏览器模式'}）`);
+  const p = sgt(Date.now()); calY = p.y; calM = p.m;
+  renderEnable(); renderClock(); renderNext(); renderAlarms(); renderCal(); renderLib(); renderLog();
+  await Promise.all([loadLibrary(), loadPresets()]);
+  renderLib(); renderAlarms();
+  checkAlarms('页面启动');
+  setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
