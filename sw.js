@@ -2,7 +2,7 @@
  * 策略：联网时先取最新文件（并更新缓存），断网时才用缓存。
  * 每次改版：把 VERSION 改成和 index.html 里 APP_VERSION 一样的新号。
  */
-const VERSION = '1.2.1';
+const VERSION = '1.3.0';
 const CACHE = 'sg-alarm-v' + VERSION;
 const AUDIO = [
   '01_Time_to_go_carpark.mp3',
