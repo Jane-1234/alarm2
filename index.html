@@ -253,7 +253,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
 <script>
 'use strict';
 /* ========== 版本：每次改版同时修改这里和 sw.js 里的 VERSION ========== */
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 const CACHE_NAME = 'sg-alarm-v' + APP_VERSION;
 
 const SGT = 8 * 3600000, DAY = 86400000, MISS_WINDOW = 30 * 60000, SNOOZE_MS = 60000;
@@ -269,7 +269,10 @@ function sgtMs(y, m, d, h = 0, mi = 0){ return Date.UTC(y, m, d, h, mi) - SGT; }
 function dayKey(y, m, d){ const t = new Date(Date.UTC(y, m, d)); return t.getUTCFullYear() + '-' + pad(t.getUTCMonth() + 1) + '-' + pad(t.getUTCDate()); }
 function keyOfMs(ms){ const p = sgt(ms); return dayKey(p.y, p.m, p.d); }
 function fmtStamp(ms){ const p = sgt(ms); return `${pad(p.m+1)}-${pad(p.d)} ${pad(p.h)}:${pad(p.mi)}:${pad(p.s)}`; }
-function fmtWhen(ms){ const p = sgt(ms); return `${p.m+1}月${p.d}日（周${WD[p.wd]}）${pad(p.h)}:${pad(p.mi)}`; }
+// 12 小时制显示（不带上午/下午）：13:10 → 1:10，00:05 → 12:05
+const h12 = h => (h % 12) || 12;
+function t12(hhmm){ const [h, m] = String(hhmm).split(':').map(Number); return `${h12(h)}:${pad(m)}`; }
+function fmtWhen(ms){ const p = sgt(ms); return `${p.m+1}月${p.d}日（周${WD[p.wd]}）${h12(p.h)}:${pad(p.mi)}`; }
 
 /* ---------- 本地存储 ---------- */
 const store = {
@@ -1435,20 +1438,20 @@ function nextRing(){
 function startRing(it){
   const a = it.alarm, g = groupOf(a.groupId);
   const modes = [g.sound && '响铃与语音', g.vibrate && '震动', g.popup && '弹窗'].filter(Boolean).join(' + ') || '完全静音';
-  log(`闹钟触发：${a.time} ${a.note || ''}［${g.name}｜${modes}］${it.snooze ? '（稍后提醒）' : ''}`);
+  log(`闹钟触发：${t12(a.time)} ${a.note || ''}［${g.name}｜${modes}］${it.snooze ? '（稍后提醒）' : ''}`);
   if (previewing) stopPreview();
   if (a.repeat.type === 'once' && !it.snooze){ a.enabled = false; saveAlarms(); renderAlarms(); }
   if (g.vibrate){
     if (navigator.vibrate) navigator.vibrate([600,300,600,300,600]);
     else log('本设备不支持震动（iPhone Safari 不支持，仅安卓有效）');
   }
-  const label = `⏰ ${a.time}${a.note ? ' ' + a.note : ''}`;
+  const label = `⏰ ${t12(a.time)}${a.note ? ' ' + a.note : ''}`;
   showTip(`${g.sound ? '⏰' : '🔕'} ${fmtWhen(it.occ)} ${a.note || ''}［${g.name}］${g.sound || g.popup ? '' : '（静音提醒）'}`);
   if (!g.sound && !g.popup){ finishRing(); return; }  // 完全静音：只显示一行小提示
   document.title = label;
   if (g.popup){
     $('#ringGroup').textContent = g.name + (it.late ? '　· 补响' : '') + (it.snooze ? '　· 稍后提醒' : '');
-    $('#ringTime').textContent = a.time;
+    $('#ringTime').textContent = t12(a.time);
     $('#ringNote').textContent = a.note || '闹钟';
     $('#ringMask').classList.add('show');
   } else {
@@ -1480,7 +1483,7 @@ function snooze(){
   if (!ringing) return;
   const a = ringing.alarm;
   snoozes.push({id:uid(), alarmId:a.id, at:Date.now() + SNOOZE_MS}); saveSnoozes();
-  log(`稍后提醒：${a.time} ${a.note || ''} 将在 1 分钟后再响`);
+  log(`稍后提醒：${t12(a.time)} ${a.note || ''} 将在 1 分钟后再响`);
   finishRing();
 }
 function showTip(t){ $('#tipLine').textContent = '最近提醒：' + t; }
@@ -1502,7 +1505,7 @@ function stopPreview(){
 let lastTick = Date.now();
 function renderClock(){
   const now = Date.now(), p = sgt(now), key = dayKey(p.y, p.m, p.d);
-  $('#clock').textContent = `${pad(p.h)}:${pad(p.mi)}:${pad(p.s)}`;
+  $('#clock').textContent = `${h12(p.h)}:${pad(p.mi)}:${pad(p.s)}`;
   const hol = holidayMap(p.y)[key];
   $('#dateLine').innerHTML = `${p.y}年${p.m+1}月${p.d}日 星期${WD[p.wd]}` +
     (hol ? `　<span id="todayTag">${esc(hol)}</span>` : '') + (muted[key] ? '　🔕 今天是静音日' : '');
@@ -1564,7 +1567,7 @@ function renderAlarms(){
     if (!list.length){ const e = document.createElement('div'); e.className = 'empty'; e.textContent = '这个分组还没有闹钟'; card.appendChild(e); }
     for (const a of list){
       const row = document.createElement('div'); row.className = 'alarm' + (a.enabled && g.enabled ? '' : ' off');
-      row.innerHTML = `<div class="t">${esc(a.time)}</div>
+      row.innerHTML = `<div class="t">${esc(t12(a.time))}</div>
         <div class="info"><div>${esc(repeatText(a))}${a.note ? '　' + esc(a.note) : ''}</div>
         <div class="muted">铃声：${esc(audioName(a.ring))}　语音：${esc(audioName(a.voice))}</div></div>
         <label class="sw"><input type="checkbox" ${a.enabled ? 'checked' : ''}><span></span></label>`;
