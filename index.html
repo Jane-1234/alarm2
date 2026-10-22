@@ -46,6 +46,19 @@ h2{font-size:17px;margin:0}
 #enableBtn{width:100%;padding:13px;font-size:17px;margin-top:10px}
 #enableBtn.on{background:var(--ok)}
 #tipLine{margin-top:8px;font-size:13px;color:var(--muted);min-height:0}
+/* 公告栏 */
+#board{border-left:5px solid var(--accent)}
+.bdHead{font-weight:600;font-size:14px;margin:12px 0 4px}
+.bdHead .muted{font-weight:400;margin-left:6px;font-size:12px}
+.bdItem{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;background:var(--chip);border-radius:10px;margin:6px 0}
+.bdItem .tx{flex:1;white-space:pre-wrap;word-break:break-word;font-size:15px}
+.bdItem.done .tx{text-decoration:line-through;opacity:.5}
+.bdItem button{padding:4px 8px;font-size:13px;background:var(--card)}
+.bdItem input[type=checkbox]{width:20px;height:20px;margin-top:2px;flex:none}
+.bdDays{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.bdDays label{padding:6px 11px;border-radius:16px;background:var(--chip);cursor:pointer}
+.bdDays label.on{background:var(--accent);color:#fff}
+.bdDays input{display:none}
 /* 标签页 */
 .tabs{display:flex;background:var(--chip);border-radius:10px;padding:3px;gap:3px;margin-top:12px}
 .tabs button{flex:1;background:transparent;padding:7px 0;font-size:15px}
@@ -137,14 +150,23 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
 </head>
 <body>
 
-<div class="card">
-  <div class="muted">新加坡时间（SGT，UTC+8）· 不受手机时区影响</div>
-  <div id="clock">--:--:--</div>
-  <div id="dateLine"></div>
-  <div id="nextLine" class="muted"></div>
-  <button id="enableBtn" class="primary">启用闹钟</button>
-  <div id="enableNote" class="muted" style="margin-top:6px">iPhone 要求先点一下才允许出声。每次重新打开应用都需要再点一次。</div>
+<div class="card" style="padding:10px 14px">
+  <button id="enableBtn" class="primary" style="margin-top:0">启用闹钟</button>
   <div id="tipLine"></div>
+</div>
+
+<!-- 公告栏（固定置顶） -->
+<div class="card" id="board">
+  <div class="row">
+    <h2>📌 公告栏</h2><span class="spacer"></span>
+    <button id="bdAddReg" class="blue">＋ 规律</button>
+    <button id="bdAddTmp" class="primary">＋ 临时</button>
+  </div>
+  <div id="bdForm" style="display:none"></div>
+  <div class="bdHead">规律公告<span class="muted">（按星期自动出现）</span></div>
+  <div id="bdReg"></div>
+  <div class="bdHead">临时公告<span class="muted">（手动添加，用完删除）</span></div>
+  <div id="bdTmp"></div>
 </div>
 
 <div class="tabs">
@@ -274,7 +296,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
 <script>
 'use strict';
 /* ========== 版本：每次改版同时修改这里和 sw.js 里的 VERSION ========== */
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 const CACHE_NAME = 'sg-alarm-v' + APP_VERSION;
 
 const SGT = 8 * 3600000, DAY = 86400000, MISS_WINDOW = 30 * 60000, SNOOZE_MS = 60000;
@@ -306,6 +328,7 @@ let muted   = store.get('muted', {});
 let snoozes = store.get('snoozes', []);
 let fired   = store.get('fired', {});
 let logs    = store.get('logs', []);
+let bulletins = store.get('bulletins', []);   // {id, kind:'reg'|'tmp', text, days:[0-6], done}
 if (!groups.find(g => g.id === 'none')) groups.unshift({id:'none', name:'未分组', enabled:true, sound:true, vibrate:false, popup:true});
 function saveAlarms(){ store.set('alarms', alarms); }
 function saveGroups(){ store.set('groups', groups); }
@@ -470,7 +493,7 @@ const PRESETS = [
 ];
 
 /* ---------- 预设闹钟（根据纸本日程整理；首次打开时自动导入，导入后可在手机上随意编辑） ---------- */
-const PRESET_ALARM_VERSION = 1;
+const PRESET_ALARM_VERSION = 2;
 const PRESET_GROUPS = [["p_daily", "每日"], ["p_bus", "校车"], ["p_mon", "周一"], ["p_tue", "周二"], ["p_wed", "周三"], ["p_thu", "周四"], ["p_fri", "周五"]];
 const PRESET_ALARMS = [
 {
@@ -898,12 +921,12 @@ const PRESET_ALARMS = [
 "note": "校车学生上厕所 ★Yu Cheng、Raven、Amelia、Charlotte ⑤，楼上 Chloe"
 },
 {
-"id": "p:p_bus:18:10:1",
+"id": "p:p_bus:18:05:1",
 "group": "p_bus",
 "days": [
 1
 ],
-"time": "18:10",
+"time": "18:05",
 "voice": "preset:08",
 "note": "校车学生去 lobby"
 },
@@ -978,12 +1001,12 @@ const PRESET_ALARMS = [
 "note": "校车学生上厕所 ★Charlotte、Jun Yi、Yu Cheng、Amelia ⑤"
 },
 {
-"id": "p:p_bus:18:10:2",
+"id": "p:p_bus:18:05:2",
 "group": "p_bus",
 "days": [
 2
 ],
-"time": "18:10",
+"time": "18:05",
 "voice": "preset:08",
 "note": "校车学生去 lobby"
 },
@@ -1058,12 +1081,12 @@ const PRESET_ALARMS = [
 "note": "校车学生上厕所 ★Charlotte、Raven、Yu Cheng、Amelia ④"
 },
 {
-"id": "p:p_bus:18:10:3",
+"id": "p:p_bus:18:05:3",
 "group": "p_bus",
 "days": [
 3
 ],
-"time": "18:10",
+"time": "18:05",
 "voice": "preset:08",
 "note": "校车学生去 lobby"
 },
@@ -1138,12 +1161,12 @@ const PRESET_ALARMS = [
 "note": "校车学生上厕所 ★Yu Cheng、Charlotte ⑤"
 },
 {
-"id": "p:p_bus:18:10:4",
+"id": "p:p_bus:18:05:4",
 "group": "p_bus",
 "days": [
 4
 ],
-"time": "18:10",
+"time": "18:05",
 "voice": "preset:08",
 "note": "校车学生去 lobby ★Jun Yi、Amelia、Raven ②"
 },
@@ -1218,16 +1241,29 @@ const PRESET_ALARMS = [
 "note": "校车学生上厕所 ★Raven、Jun Yi、Charlotte、HP Chloe（4）"
 },
 {
-"id": "p:p_bus:18:10:5",
+"id": "p:p_bus:18:05:5",
 "group": "p_bus",
 "days": [
 5
 ],
-"time": "18:10",
+"time": "18:05",
 "voice": "preset:08",
 "note": "校车学生去 lobby"
 }
 ];
+// 预设版本 1 → 2：校车 18:10 去 lobby 改为 18:05（用户改过时间的不动）
+function migratePresets(from){
+  if (from < 2){
+    let n = 0;
+    for (const a of alarms){
+      if (!String(a.id).startsWith('p:p_bus:18:10:')) continue;
+      if (a.time === '18:10'){ a.time = '18:05'; n++; }
+      a.id = a.id.replace('p:p_bus:18:10:', 'p:p_bus:18:05:');
+    }
+    log(`预设闹钟更新：校车 6:10 去 lobby 改为 6:05（${n} 个）`);
+  }
+  store.set('presetVer', PRESET_ALARM_VERSION); saveAlarms();
+}
 function importPresetAlarms(restore){
   for (const [id, name] of PRESET_GROUPS)
     if (!groups.find(g => g.id === id)) groups.push({id, name, enabled:true, sound:true, vibrate:false, popup:true});
@@ -1524,21 +1560,9 @@ function stopPreview(){
 
 /* ---------- 界面：时钟与下一个闹钟 ---------- */
 let lastTick = Date.now();
-function renderClock(){
-  const now = Date.now(), p = sgt(now), key = dayKey(p.y, p.m, p.d);
-  $('#clock').textContent = `${h12(p.h)}:${pad(p.mi)}:${pad(p.s)}`;
-  const hol = holidayMap(p.y)[key];
-  $('#dateLine').innerHTML = `${p.y}年${p.m+1}月${p.d}日 星期${WD[p.wd]}` +
-    (hol ? `　<span id="todayTag">${esc(hol)}</span>` : '') + (muted[key] ? '　🔕 今天是静音日' : '');
-}
-function renderNext(){
-  const now = Date.now(), n = nextAlarm(now);
-  if (!n){ $('#nextLine').textContent = '下一个闹钟：无'; return; }
-  let s = Math.max(0, Math.floor((n.at - now) / 1000));
-  const d = Math.floor(s / 86400); s %= 86400; const h = Math.floor(s / 3600); s %= 3600; const m = Math.floor(s / 60); s %= 60;
-  const left = (d ? d + ' 天 ' : '') + (d || h ? h + ' 小时 ' : '') + m + ' 分 ' + (d ? '' : s + ' 秒');
-  $('#nextLine').textContent = `下一个闹钟：${fmtWhen(n.at)}${n.alarm.note ? ' ' + n.alarm.note : ''}${n.snooze ? '（稍后提醒）' : ''}　还有 ${left}`;
-}
+// 顶部不再显示时间/下一个闹钟；内部计时照常运行
+function renderClock(){ renderBoardIfDayChanged(); }
+function renderNext(){}
 function tick(){
   const now = Date.now();
   if (now - lastTick > 5000) log(`页面暂停了约 ${Math.round((now - lastTick)/1000)} 秒（可能在后台或被系统冻结）`);
@@ -1547,6 +1571,58 @@ function tick(){
   const p = sgt(now), m = keyOfMs(now) + ' ' + pad(p.h) + ':' + pad(p.mi);
   if (m !== dayListMinute && !document.hidden) renderDayList();
 }
+
+/* ---------- 公告栏 ---------- */
+let boardDay = '', bdEdit = null;
+function saveBulletins(){ store.set('bulletins', bulletins); }
+function renderBoardIfDayChanged(){ const k = keyOfMs(Date.now()); if (k !== boardDay) renderBoard(); }
+function bdItemHtml(b, dim){
+  const tags = b.kind === 'reg' ? `<span class="tag">${!b.days.length || b.days.length === 7 ? '每天' : b.days.slice().sort((x,y)=>((x+6)%7)-((y+6)%7)).map(d=>'周'+WD[d]).join(' ')}</span> ` : '';
+  return `<div class="bdItem${b.done ? ' done' : ''}" data-id="${b.id}" style="${dim ? 'opacity:.55' : ''}">` +
+    (b.kind === 'tmp' ? `<input type="checkbox" data-act="done" ${b.done ? 'checked' : ''}>` : '') +
+    `<div class="tx">${tags}${esc(b.text)}</div><button data-act="edit">编辑</button><button data-act="del" class="danger">删除</button></div>`;
+}
+function renderBoard(){
+  const wd = sgt(Date.now()).wd; boardDay = keyOfMs(Date.now());
+  const reg = bulletins.filter(b => b.kind === 'reg'), tmp = bulletins.filter(b => b.kind === 'tmp');
+  const on = b => !b.days.length || b.days.includes(wd);
+  const today = reg.filter(on), other = reg.filter(b => !on(b));
+  let h = today.map(b => bdItemHtml(b)).join('') || '<div class="muted">今天没有规律公告</div>';
+  if (other.length) h += `<details style="margin-top:6px"><summary class="muted">其他日子的规律公告（${other.length}）</summary>${other.map(b => bdItemHtml(b, true)).join('')}</details>`;
+  $('#bdReg').innerHTML = h;
+  $('#bdTmp').innerHTML = (tmp.map(b => bdItemHtml(b)).join('') || '<div class="muted">暂无临时公告</div>') +
+    (tmp.some(b => b.done) ? '<div style="margin-top:6px"><button data-act="clr">清除已完成</button></div>' : '');
+  $('#board').querySelectorAll('.bdItem').forEach(el => {
+    const b = bulletins.find(x => x.id === el.dataset.id);
+    el.querySelector('[data-act="edit"]').onclick = () => openBdForm(b.kind, b);
+    el.querySelector('[data-act="del"]').onclick = () => { if (confirm('删除这条公告？')){ bulletins = bulletins.filter(x => x !== b); saveBulletins(); renderBoard(); } };
+    const c = el.querySelector('[data-act="done"]'); if (c) c.onchange = () => { b.done = c.checked; saveBulletins(); renderBoard(); };
+  });
+  const clr = $('#bdTmp [data-act="clr"]'); if (clr) clr.onclick = () => { bulletins = bulletins.filter(x => !(x.kind === 'tmp' && x.done)); saveBulletins(); renderBoard(); };
+}
+function openBdForm(kind, b){
+  bdEdit = b || null;
+  const days = b ? b.days : [];
+  const f = $('#bdForm'); f.style.display = 'block';
+  f.innerHTML = `<div class="bdHead">${b ? '编辑' : '新建'}${kind === 'reg' ? '规律公告' : '临时公告'}</div>` +
+    `<textarea id="bdText" rows="3" placeholder="公告内容"></textarea>` +
+    (kind === 'reg' ? `<div class="muted" style="margin-top:6px">哪几天显示（都不选 = 每天）</div><div class="bdDays">` +
+      [1,2,3,4,5,6,0].map(d => `<label class="${days.includes(d) ? 'on' : ''}"><input type="checkbox" value="${d}" ${days.includes(d) ? 'checked' : ''}>周${WD[d]}</label>`).join('') + `</div>` : '') +
+    `<div class="row" style="margin-top:8px"><button class="primary" id="bdSave">保存</button><button id="bdCancel">取消</button></div>`;
+  $('#bdText').value = b ? b.text : '';
+  f.querySelectorAll('.bdDays input').forEach(i => i.onchange = () => i.parentNode.classList.toggle('on', i.checked));
+  $('#bdCancel').onclick = () => { f.style.display = 'none'; f.innerHTML = ''; };
+  $('#bdSave').onclick = () => {
+    const text = $('#bdText').value.trim(); if (!text){ $('#bdText').focus(); return; }
+    const ds = kind === 'reg' ? [...f.querySelectorAll('.bdDays input:checked')].map(i => +i.value) : [];
+    if (bdEdit){ bdEdit.text = text; bdEdit.days = ds; }
+    else bulletins.push({id: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,5), kind, text, days: ds, done: false});
+    saveBulletins(); f.style.display = 'none'; f.innerHTML = ''; renderBoard();
+  };
+  $('#bdText').focus();
+}
+$('#bdAddReg').onclick = () => openBdForm('reg');
+$('#bdAddTmp').onclick = () => openBdForm('tmp');
 
 /* ---------- 界面：分组与闹钟 ---------- */
 function modeDesc(g){
@@ -1842,9 +1918,11 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:'){
 (async function init(){
   const standalone = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches;
   log(`页面启动 v${APP_VERSION}（${standalone ? '主屏幕应用模式' : '浏览器模式'}）`);
-  if (store.get('presetVer', 0) < PRESET_ALARM_VERSION) importPresetAlarms(false);
+  { const pv = store.get('presetVer', 0);
+    if (pv === 0) importPresetAlarms(false);            // 第一次打开：导入全部预设
+    else if (pv < PRESET_ALARM_VERSION) migratePresets(pv); }  // 已导入过：只做改动，不重新导入
   const p = sgt(Date.now()); calY = p.y; calM = p.m;
-  renderEnable(); renderClock(); renderNext(); renderAlarms(); renderCal(); renderLib(); renderLog();
+  renderEnable(); renderBoard(); renderAlarms(); renderCal(); renderLib(); renderLog();
   await Promise.all([loadLibrary(), loadPresets()]);
   renderLib(); renderAlarms();
   checkAlarms('页面启动');
